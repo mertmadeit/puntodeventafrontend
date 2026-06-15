@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { login } from "@/lib/api/auth"
-import { ApiError } from "@/lib/api/client"
+import { ApiConnectionError, ApiError } from "@/lib/api/client"
 import { fetchInventory } from "@/lib/api/inventory"
 import { toast } from "sonner"
 import { ApiConfigDialog } from "@/components/api-config-dialog"
@@ -222,6 +222,11 @@ export function LoginForm({
 
         setErrorTitle("No se pudo iniciar sesión")
         setErrorMessage(error.message || `La API respondió con ${error.status}.`)
+        return
+      }
+      if (error instanceof ApiConnectionError) {
+        setErrorTitle("Error de conexión")
+        setErrorMessage(`No se pudo conectar con la API: ${error.url}. ${error.message}`)
         return
       }
       setErrorTitle("Error de conexión")

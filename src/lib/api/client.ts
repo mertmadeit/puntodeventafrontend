@@ -20,13 +20,37 @@ export class ApiError extends Error {
   }
 }
 
+export class ApiConnectionError extends Error {
+  url: string
+
+  constructor(url: string, message: string) {
+    super(message)
+    this.url = url
+  }
+}
+
+function isProduction() {
+  return process.env.NODE_ENV === "production"
+}
+
+function isLocalhostUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1"
+  } catch {
+    return false
+  }
+}
+
 function getBaseUrl() {
   let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
   if (typeof window !== "undefined") {
     try {
       const saved = localStorage.getItem("pos.apiBaseUrl")
-      if (saved) baseUrl = saved
+      if (saved && (!isProduction() || !baseUrl)) {
+        if (!isProduction() || !isLocalhostUrl(saved)) baseUrl = saved
+      }
     } catch {
       // ignore
     }
@@ -133,12 +157,18 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     }
   }
 
-  const response = await fetch(url, {
-    method,
-    headers: requestHeaders,
-    body: body === undefined || body instanceof FormData ? body : JSON.stringify(body),
-    signal,
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method,
+      headers: requestHeaders,
+      body: body === undefined || body instanceof FormData ? body : JSON.stringify(body),
+      signal,
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "No se pudo conectar con la API"
+    throw new ApiConnectionError(url, message)
+  }
 
   if (response.status === 401 && auth) {
     clearAuthSession()

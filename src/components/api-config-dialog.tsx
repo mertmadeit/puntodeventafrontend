@@ -22,13 +22,12 @@ export function ApiConfigDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [apiUrl, setApiUrl] = React.useState("")
-
-  React.useEffect(() => {
-    if (open && typeof window !== "undefined") {
-      setApiUrl(localStorage.getItem("pos.apiBaseUrl") || "http://localhost:8080")
-    }
-  }, [open])
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? ""
+  const [apiUrl, setApiUrl] = React.useState(() => {
+    const fallbackApiUrl = process.env.NODE_ENV === "production" ? configuredApiUrl : "http://localhost:8080"
+    if (typeof window === "undefined") return configuredApiUrl || fallbackApiUrl
+    return localStorage.getItem("pos.apiBaseUrl") || configuredApiUrl || fallbackApiUrl
+  })
 
   const saveApiConfig = () => {
     if (apiUrl.trim()) {

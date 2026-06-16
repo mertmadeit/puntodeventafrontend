@@ -60,7 +60,13 @@ import {
 export type { UserRow } from "@/components/usuarios/user-utils"
 
 /** Tabla de administracion de usuarios con alta, edicion y baja logica. */
-export function DataTable({ data: initialData }: { data: UserRow[] }) {
+export function DataTable({
+  data: initialData,
+  onRowsChange,
+}: {
+  data: UserRow[]
+  onRowsChange?: (rows: UserRow[]) => void
+}) {
   const [rows, setRows] = React.useState<UserRow[]>(initialData)
   const [form, setForm] = React.useState<FormValues>(EMPTY_FORM)
   const [editingId, setEditingId] = React.useState<number | null>(null)
@@ -103,6 +109,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
   const openCreate = React.useCallback(() => {
     setForm(EMPTY_FORM)
     setEditingId(null)
+    setErrorMessage(null)
     setOpen(true)
   }, [])
 
@@ -116,6 +123,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
       role: row.role,
       status: row.status,
     })
+    setErrorMessage(null)
     setOpen(true)
   }, [])
 
@@ -167,13 +175,19 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
 
       if (isEditing && editingId !== null) {
         const updated = mapApiUser(await updateUser(editingId, payload))
-        setRows((prev) =>
-          prev.map((row) => (row.id === editingId ? updated : row))
-        )
+        setRows((prev) => {
+          const next = prev.map((row) => (row.id === editingId ? updated : row))
+          onRowsChange?.(next)
+          return next
+        })
         updateSidebarUserCache(updated)
       } else {
         const created = mapApiUser(await createUser(payload))
-        setRows((prev) => [created, ...prev])
+        setRows((prev) => {
+          const next = [created, ...prev]
+          onRowsChange?.(next)
+          return next
+        })
       }
 
       closeSheet()
@@ -189,7 +203,11 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
     try {
       setErrorMessage(null)
       await deleteUser(id)
-      setRows((prev) => prev.filter((row) => row.id !== id))
+      setRows((prev) => {
+        const next = prev.filter((row) => row.id !== id)
+        onRowsChange?.(next)
+        return next
+      })
       if (editingId === id) {
         closeSheet()
       }
@@ -197,7 +215,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
       const message = error instanceof Error ? error.message : "No se pudo eliminar el usuario"
       setErrorMessage(message)
     }
-  }, [editingId, closeSheet])
+  }, [editingId, closeSheet, onRowsChange])
 
   const tableRows = React.useMemo(() => {
     if (!filteredRows.length) {
@@ -440,6 +458,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
                   <Input
                     id="user-name"
                     placeholder="Nombre"
+                    required
                     value={form.name}
                     onChange={(event) =>
                       setForm((prev) => ({ ...prev, name: event.target.value }))
@@ -453,6 +472,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
                     id="user-email"
                     placeholder="Correo"
                     type="email"
+                    required
                     value={form.email}
                     onChange={(event) =>
                       setForm((prev) => ({

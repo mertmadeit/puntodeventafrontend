@@ -108,7 +108,11 @@ export function Usuarios() {
         </Card>
       </div>
 
-      <DataTable data={users} key={users.map((user) => `${user.id}:${user.image?.length ?? 0}`).join("|")} />
+      <DataTable
+        data={users}
+        onRowsChange={setUsers}
+        key={users.map((user) => `${user.id}:${user.image?.length ?? 0}`).join("|")}
+      />
     </div>
   )
 }

@@ -121,6 +121,7 @@ type SidebarUser = {
 
 const SIDEBAR_USER_STORAGE_KEY = "auth.sidebarUser"
 
+/** Convierte cualquier respuesta de usuario a un formato seguro para el sidebar. */
 function normalizeUser(input: unknown): SidebarUser | null {
   if (!input || typeof input !== "object") return null
 
@@ -153,6 +154,7 @@ function normalizeUser(input: unknown): SidebarUser | null {
   }
 }
 
+/** Recupera el usuario cacheado para pintar el sidebar antes de llamar a la API. */
 function getStoredSidebarUser(): SidebarUser | null {
   if (typeof window === "undefined") {
     return null
@@ -171,6 +173,7 @@ function getStoredSidebarUser(): SidebarUser | null {
   return null
 }
 
+/** Construye un usuario minimo cuando no hay sesion completa disponible. */
 function getStoredUserFallback(): SidebarUser {
   const storedUser = getStoredSidebarUser()
   if (storedUser) return storedUser
@@ -194,6 +197,7 @@ function getStoredUserFallback(): SidebarUser {
   }
 }
 
+/** Guarda el usuario normalizado para evitar saltos visuales entre navegaciones. */
 function storeSidebarUser(user: SidebarUser) {
   try {
     localStorage.setItem(SIDEBAR_USER_STORAGE_KEY, JSON.stringify(user))
@@ -202,13 +206,10 @@ function storeSidebarUser(user: SidebarUser) {
   }
 }
 
+/** Sidebar principal con navegacion por modulos y datos del usuario autenticado. */
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const [user, setUser] = React.useState<SidebarUser>({
-    name: "Usuario",
-    email: "sesion@pdv.local",
-    avatar: "",
-  })
+  const [user, setUser] = React.useState<SidebarUser>(() => getStoredUserFallback())
   const isRouteActive = React.useCallback(
     (url: string) => pathname === url || pathname.startsWith(`${url}/`),
     [pathname]
@@ -244,9 +245,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   React.useEffect(() => {
     let active = true
     const controller = new AbortController()
-
-    // Immediately set to local storage value after mount to prevent hydration mismatch
-    setUser(getStoredUserFallback())
 
     async function loadUser() {
       try {

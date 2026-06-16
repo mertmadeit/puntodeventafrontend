@@ -18,6 +18,7 @@ const ROUTE_TITLES: Array<{ prefix: string; title: string }> = [
   { prefix: "/dashboard", title: "Panel" },
 ]
 
+/** Resuelve el titulo visible del modulo a partir de la ruta actual. */
 function titleFromPathname(pathname: string | null) {
   if (!pathname) return "Dashboard"
 
@@ -39,6 +40,7 @@ function titleFromPathname(pathname: string | null) {
   return "Dashboard"
 }
 
+/** Header superior que muestra el modulo activo y el control del sidebar. */
 export function SiteHeader() {
   const pathname = usePathname()
   const title = titleFromPathname(pathname)

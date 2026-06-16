@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/layout/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { PageTransition } from "@/components/motion/page-transition"
 
+/** Estructura comun de dashboard con sidebar, header y contenido del modulo. */
 export function AppShell({
   children,
   sidebarOpen,

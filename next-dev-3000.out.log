@@ -1,19 +1,11 @@
-
-> puntodeventafrontend@0.1.0 dev
-> next dev
-
 ▲ Next.js 16.2.6 (Turbopack)
 - Local:         http://localhost:3000
-- Network:       http://192.168.1.21:3000
+- Network:       http://192.168.1.7:3000
 - Environments: .env.local
-✓ Ready in 684ms
+✓ Ready in 746ms
 Creating turbopack project {
   dir: 'C:\\PROYECTOS\\proyectopdv\\puntodeventafrontend',
   testMode: true
 }
 
- GET /dashboard 200 in 1082ms (next.js: 130ms, proxy.ts: 213ms, application-code: 740ms)
- GET /dashboard 200 in 1082ms (next.js: 584ms, proxy.ts: 211ms, application-code: 287ms)
- GET /login 200 in 112ms (next.js: 37ms, proxy.ts: 8ms, application-code: 67ms)
- GET /login 200 in 74ms (next.js: 9ms, proxy.ts: 11ms, application-code: 53ms)
- GET /login 200 in 133ms (next.js: 27ms, proxy.ts: 23ms, application-code: 83ms)
+ GET /login 200 in 351ms (next.js: 106ms, proxy.ts: 7ms, application-code: 237ms)

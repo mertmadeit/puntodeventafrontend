@@ -8,7 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -53,67 +52,32 @@ import {
 } from "@hugeicons/core-free-icons"
 import { fetchCategories } from "@/lib/api/catalog"
 import type { ApiCategory } from "@/lib/api/types"
-import { apiFetch } from "@/lib/api/client"
+import {
+  createProduct,
+  deleteProduct,
+  updateProduct,
+} from "@/lib/api/inventory"
+import {
+  EMPTY_PRODUCT_FORM,
+  buildCategoryOptions,
+  currencyFormatter,
+  getStockState,
+  inventoryRowToForm,
+  inventoryRowToPayload,
+  productFormToPayload,
+  productFormToRow,
+  stockBadgeClass,
+  stockStateLabel,
+  type InventoryRow,
+  type InventoryTab,
+  type ProductFormValues,
+} from "@/components/inventario/inventory-utils"
+import { useBarcodeScanner } from "@/components/inventario/use-barcode-scanner"
 import { toast } from "sonner"
 
-type StockState = "suficiente" | "bajo" | "agotado"
-type InventoryTab = "todos" | "faltantes" | "agotados"
+export type { InventoryRow } from "@/components/inventario/inventory-utils"
 
-export type InventoryRow = {
-  id: number
-  producto: string
-  categoria: string
-  codigoBarras: string
-  stock: number
-  stockMinimo: number
-  precio: number
-  unidad: string
-}
-
-type ProductFormValues = {
-  producto: string
-  categoria: string
-  codigoBarras: string
-  stock: string
-  stockMinimo: string
-  precio: string
-  unidad: string
-}
-
-const EMPTY_PRODUCT_FORM: ProductFormValues = {
-  producto: "",
-  categoria: "",
-  codigoBarras: "",
-  stock: "0",
-  stockMinimo: "0",
-  precio: "0.00",
-  unidad: "pzas",
-}
-
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-})
-
-function getStockState(row: InventoryRow): StockState {
-  if (row.stock <= 0) return "agotado"
-  if (row.stock <= row.stockMinimo) return "bajo"
-  return "suficiente"
-}
-
-function stockStateLabel(state: StockState) {
-  if (state === "agotado") return "Agotado"
-  if (state === "bajo") return "Stock bajo"
-  return "Stock suficiente"
-}
-
-function stockBadgeClass(state: StockState) {
-  if (state === "suficiente") return "border-emerald-500/40 text-emerald-600"
-  if (state === "bajo") return "border-amber-500/40 text-amber-600"
-  return "border-rose-500/40 text-rose-600"
-}
-
+/** Tabla editable de inventario con filtros, alta/edicion y cambio rapido de precio. */
 export function DataTable({
   data: initialData,
 }: {
@@ -138,17 +102,12 @@ export function DataTable({
   const [editingPriceId, setEditingPriceId] = React.useState<number | null>(null)
   const [priceDraft, setPriceDraft] = React.useState("")
   const searchInputRef = React.useRef<HTMLInputElement | null>(null)
-  const scannerBufferRef = React.useRef("")
-  const scannerTimeoutRef = React.useRef<number | null>(null)
 
   const deferredSearch = React.useDeferredValue(search)
   const normalizedSearch = deferredSearch.trim().toLowerCase()
   const isEditingProduct = productEditingId !== null
   const categoryOptions = React.useMemo(
-    () =>
-      categories
-        .map((category) => category.name.trim())
-        .filter((name, index, names) => name && names.indexOf(name) === index),
+    () => buildCategoryOptions(categories),
     [categories]
   )
 
@@ -186,76 +145,18 @@ export function DataTable({
 
 
 
-  React.useEffect(() => {
-    function clearScannerBuffer() {
-      scannerBufferRef.current = ""
+  const handleBarcodeScan = React.useCallback((code: string) => {
+    setSearch(code)
+    setActiveTab("todos")
+    setCurrentPage(1)
+    searchInputRef.current?.focus()
+    searchInputRef.current?.select()
+  }, [])
 
-      if (scannerTimeoutRef.current !== null) {
-        window.clearTimeout(scannerTimeoutRef.current)
-        scannerTimeoutRef.current = null
-      }
-    }
-
-    function isEditableTarget(target: EventTarget | null) {
-      if (!target) return false
-
-      const element = target as HTMLElement
-      return (
-        element.isContentEditable ||
-        element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement
-      )
-    }
-
-    function applyBarcodeSearch(code: string) {
-      setSearch(code)
-      setActiveTab("todos")
-      setCurrentPage(1)
-      searchInputRef.current?.focus()
-      searchInputRef.current?.select()
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.ctrlKey || event.metaKey || event.altKey) return
-      if (isEditableTarget(event.target)) return
-
-      if (event.key === "Enter") {
-        const code = scannerBufferRef.current.trim()
-        if (code.length >= 4) {
-          applyBarcodeSearch(code)
-          event.preventDefault()
-        }
-        clearScannerBuffer()
-        return
-      }
-
-      if (event.key.length !== 1) return
-
-      scannerBufferRef.current += event.key
-
-      if (scannerTimeoutRef.current !== null) {
-        window.clearTimeout(scannerTimeoutRef.current)
-      }
-
-      scannerTimeoutRef.current = window.setTimeout(() => {
-        const code = scannerBufferRef.current.trim()
-
-        if (code.length >= 8) {
-          applyBarcodeSearch(code)
-        }
-
-        clearScannerBuffer()
-      }, 120)
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      clearScannerBuffer()
-    }
-  }, [productOpen, filterOpen])
+  useBarcodeScanner({
+    disabled: productOpen || filterOpen,
+    onScan: handleBarcodeScan,
+  })
 
   const filteredRows = React.useMemo(
     () =>
@@ -304,15 +205,7 @@ export function DataTable({
 
   const openEditProduct = React.useCallback((row: InventoryRow) => {
     setProductEditingId(row.id)
-    setProductForm({
-      producto: row.producto,
-      categoria: row.categoria,
-      codigoBarras: row.codigoBarras,
-      stock: String(row.stock),
-      stockMinimo: String(row.stockMinimo),
-      precio: row.precio.toFixed(2),
-      unidad: row.unidad,
-    })
+    setProductForm(inventoryRowToForm(row))
     setProductOpen(true)
   }, [])
 
@@ -320,60 +213,21 @@ export function DataTable({
     if (!productForm.producto.trim()) return
 
     try {
-      // Resolve category name to ID
-      const matchedCat = categories.find(
-        (c) => c.name.trim().toLowerCase() === productForm.categoria.trim().toLowerCase()
-      )
-      const categoriaId = matchedCat ? matchedCat.id : null
-
-      // Backend expects snake_case Spanish field names
-      const payload: Record<string, unknown> = {
-        nombre: productForm.producto,
-        codigo_barras: productForm.codigoBarras || "",
-        categoria_id: categoriaId,
-        stock: Number(productForm.stock),
-        stock_minimo: Number(productForm.stockMinimo),
-        precio: Number(productForm.precio),
-        unidad: productForm.unidad,
-      }
+      const payload = productFormToPayload(productForm, categories)
 
       if (productEditingId) {
-        await apiFetch(`/api/products/${productEditingId}`, {
-          method: "PUT",
-          body: payload,
-        })
+        await updateProduct(productEditingId, payload)
         setRows((prev) =>
           prev.map((r) =>
             r.id === productEditingId
-              ? {
-                  ...r,
-                  producto: productForm.producto,
-                  categoria: productForm.categoria,
-                  codigoBarras: productForm.codigoBarras ?? "",
-                  stock: Number(productForm.stock),
-                  stockMinimo: Number(productForm.stockMinimo),
-                  precio: Number(productForm.precio),
-                  unidad: productForm.unidad,
-                }
+              ? productFormToRow(productForm, productEditingId)
               : r
           )
         )
       } else {
-        const created = await apiFetch<{ id: number }>("/api/products", {
-          method: "POST",
-          body: payload,
-        })
+        const created = await createProduct(payload)
         setRows((prev) => [
-          {
-            id: Number(created.id),
-            producto: productForm.producto,
-            categoria: productForm.categoria,
-            codigoBarras: productForm.codigoBarras ?? "",
-            stock: Number(productForm.stock),
-            stockMinimo: Number(productForm.stockMinimo),
-            precio: Number(productForm.precio),
-            unidad: productForm.unidad,
-          },
+          productFormToRow(productForm, Number(created.id)),
           ...prev,
         ])
       }
@@ -385,17 +239,11 @@ export function DataTable({
     }
   }
 
-  function deleteProduct() {
-    // Obsolete
-  }
-
   async function confirmDelete() {
     if (!deletingId) return
 
     try {
-      await apiFetch(`/api/products/${deletingId}`, {
-        method: "DELETE",
-      })
+      await deleteProduct(deletingId)
       setRows((prev) => prev.filter((r) => r.id !== deletingId))
       setDeletingId(null)
       toast.success("Producto eliminado")
@@ -423,25 +271,7 @@ export function DataTable({
     }
 
     try {
-      // Resolve category name to ID
-      const matchedCat = categories.find(
-        (c) => c.name.trim().toLowerCase() === row.categoria.trim().toLowerCase()
-      )
-
-      const payload: Record<string, unknown> = {
-        nombre: row.producto,
-        codigo_barras: row.codigoBarras || "",
-        categoria_id: matchedCat ? matchedCat.id : null,
-        stock: row.stock,
-        stock_minimo: row.stockMinimo,
-        precio: newPrice,
-        unidad: row.unidad,
-      }
-
-      await apiFetch(`/api/products/${editingPriceId}`, {
-        method: "PUT",
-        body: payload,
-      })
+      await updateProduct(editingPriceId, inventoryRowToPayload(row, categories, newPrice))
 
       setRows((prev) =>
         prev.map((r) =>

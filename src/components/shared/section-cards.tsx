@@ -21,6 +21,7 @@ const currencyFormatter = new Intl.NumberFormat("es-MX", {
   minimumFractionDigits: 2,
 })
 
+/** Tarjetas resumen del dashboard con indicadores comerciales principales. */
 export function SectionCards() {
   const [summary, setSummary] = React.useState<ApiDashboardSummary | null>(null)
   const [loading, setLoading] = React.useState(true)

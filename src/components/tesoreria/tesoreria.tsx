@@ -51,6 +51,12 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table"
+import {
+	currencyFormatter,
+	formatDateTime,
+	formatTime,
+	moneyClass,
+} from "@/components/tesoreria/treasury-utils"
 
 type MovimientoTipo = "entrada" | "retiro"
 type MovimientoCategoria = "operativo" | "proveedor" | "otro"
@@ -69,49 +75,7 @@ type GastoDia = {
 
 type CorteCaja = ApiTesoreriaCorte
 
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-	style: "currency",
-	currency: "MXN",
-	minimumFractionDigits: 2,
-})
-
-const dateTimeFormatter = new Intl.DateTimeFormat("es-MX", {
-	day: "2-digit",
-	month: "2-digit",
-	year: "numeric",
-	hour: "2-digit",
-	minute: "2-digit",
-})
-
-const timeFormatter = new Intl.DateTimeFormat("es-MX", {
-	hour: "2-digit",
-	minute: "2-digit",
-})
-
-function parseDateTime(value: string) {
-	const parsed = new Date(value.trim().replace(" ", "T"))
-	if (Number.isNaN(parsed.getTime())) return null
-	return parsed
-}
-
-function formatDateTime(value: string) {
-	const parsed = parseDateTime(value)
-	if (!parsed) return value
-	return dateTimeFormatter.format(parsed)
-}
-
-function formatTime(value: string) {
-	const parsed = parseDateTime(value)
-	if (!parsed) return value.slice(11, 16) || value
-	return timeFormatter.format(parsed)
-}
-
-function moneyClass(value: number) {
-	if (value > 0) return "text-emerald-600"
-	if (value < 0) return "text-rose-600"
-	return "text-muted-foreground"
-}
-
+/** Modulo de tesoreria: resume caja, movimientos, cortes y turnos activos. */
 export function Tesoreria() {
 	const [fondoCaja, setFondoCaja] = React.useState(0)
 	const [ventasEfectivo, setVentasEfectivo] = React.useState(0)

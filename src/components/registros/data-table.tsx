@@ -42,10 +42,12 @@ export type UserRow = {
   detalle: string
 }
 
+/** Convierte timestamps de auditoria a Date tolerando valores invalidos. */
 function parseTimestamp(timestamp: string) {
   return new Date(timestamp.replace(" ", "T"))
 }
 
+/** Formatea timestamps de auditoria para lectura humana. */
 function formatTimestamp(timestamp: string) {
   const parsed = parseTimestamp(timestamp)
 
@@ -62,6 +64,7 @@ function formatTimestamp(timestamp: string) {
   })
 }
 
+/** Tabla de registros de auditoria con filtros y paginacion. */
 export function DataTable({
   data: initialData,
 }: {

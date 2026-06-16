@@ -14,8 +14,9 @@ import { DataTable, type UserRow } from "@/components/usuarios/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChartUpIcon } from "@hugeicons/core-free-icons"
 import { fetchUsers } from "@/lib/api/users"
-import type { ApiUser } from "@/lib/api/types"
+import { mapApiUser } from "@/components/usuarios/user-utils"
 
+/** Pantalla de usuarios: carga cuentas desde la API y las pasa a la tabla editable. */
 export function Usuarios() {
   const [users, setUsers] = React.useState<UserRow[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -30,15 +31,7 @@ export function Usuarios() {
         setErrorMessage(null)
         const data = await fetchUsers()
         if (!active) return
-        const mapped: UserRow[] = data.map((user: ApiUser) => ({
-          id: Number(user.id),
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          status: user.status.toLowerCase() === "inactivo" ? "Inactivo" : "Activo",
-          image: user.imageUrl ?? "",
-        }))
-        setUsers(mapped)
+        setUsers(data.map(mapApiUser))
       } catch (error) {
         if (!active) return
         const message = error instanceof Error ? error.message : "No se pudo cargar usuarios"

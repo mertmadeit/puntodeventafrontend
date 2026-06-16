@@ -15,6 +15,7 @@ const ThemeContext = React.createContext<ThemeContextValue | undefined>(
   undefined
 )
 
+/** Lee el tema guardado, usando system como valor seguro por defecto. */
 function getStoredTheme() {
   if (typeof window === "undefined") return "system"
   try {
@@ -28,6 +29,7 @@ function getStoredTheme() {
   return "system"
 }
 
+/** Detecta el tema preferido por el sistema operativo. */
 function getSystemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "light"
   return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -35,41 +37,37 @@ function getSystemTheme(): ResolvedTheme {
     : "light"
 }
 
+/** Aplica la clase de tema al documento para que Tailwind/Radix usen el modo correcto. */
 function applyThemeClass(resolved: ResolvedTheme) {
   const root = document.documentElement
   root.classList.remove("light", "dark")
   root.classList.add(resolved)
 }
 
+/** Provee tema global y sincroniza preferencia local con el DOM. */
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = React.useState<Theme>(() => getStoredTheme())
-  const [resolvedTheme, setResolvedTheme] = React.useState<ResolvedTheme>(() =>
-    theme === "system" ? getSystemTheme() : theme
-  )
+  const [systemTheme, setSystemTheme] = React.useState<ResolvedTheme>(() => getSystemTheme())
+  const resolvedTheme = theme === "system" ? systemTheme : theme
 
   React.useEffect(() => {
-    const nextResolved = theme === "system" ? getSystemTheme() : theme
-    setResolvedTheme(nextResolved)
-    applyThemeClass(nextResolved)
+    applyThemeClass(resolvedTheme)
 
     try {
       localStorage.setItem("theme", theme)
     } catch {
       // ignore storage errors
     }
-  }, [theme])
+  }, [resolvedTheme, theme])
 
   React.useEffect(() => {
     if (theme !== "system") return
 
     const media = window.matchMedia("(prefers-color-scheme: dark)")
     const onChange = () => {
-      const nextResolved = media.matches ? "dark" : "light"
-      setResolvedTheme(nextResolved)
-      applyThemeClass(nextResolved)
+      setSystemTheme(media.matches ? "dark" : "light")
     }
 
-    onChange()
     media.addEventListener("change", onChange)
 
     return () => {
@@ -90,6 +88,7 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** Evita que el atajo de tema se dispare mientras el usuario escribe. */
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false
@@ -103,6 +102,7 @@ function isTypingTarget(target: EventTarget | null) {
   )
 }
 
+/** Atajo de teclado para alternar rapidamente entre tema claro y oscuro. */
 function ThemeHotkey() {
   const { resolvedTheme, setTheme } = useTheme()
 
@@ -137,6 +137,7 @@ function ThemeHotkey() {
   return null
 }
 
+/** Hook seguro para consumir el tema dentro de componentes cliente. */
 function useTheme() {
   const context = React.useContext(ThemeContext)
 

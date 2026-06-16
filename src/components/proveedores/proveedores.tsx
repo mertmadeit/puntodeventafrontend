@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,7 +29,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetFooter,
   SheetHeader,
   SheetTitle,
@@ -48,34 +46,17 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon,
   MoreVerticalCircle01Icon,
-  Store02Icon,
 } from "@hugeicons/core-free-icons"
 
 import { apiFetch } from "@/lib/api/client"
+import {
+  EMPTY_FORM,
+  buildProviderPayload,
+  type ProveedorFormValues,
+  type ProveedorRow,
+} from "@/components/proveedores/provider-utils"
 
-type ProveedorRow = {
-  id: number
-  nombre: string
-  contacto: string
-  telefono: string
-  rfc: string
-  activo: boolean
-}
-
-type ProveedorFormValues = {
-  nombre: string
-  contacto: string
-  telefono: string
-  rfc: string
-}
-
-const EMPTY_FORM: ProveedorFormValues = {
-  nombre: "",
-  contacto: "",
-  telefono: "",
-  rfc: "",
-}
-
+/** Modulo de proveedores con alta, edicion y eliminacion controlada. */
 export function Proveedores() {
   const [rows, setRows] = React.useState<ProveedorRow[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -142,18 +123,19 @@ export function Proveedores() {
 
     try {
       setErrorMessage(null)
+      const payload = buildProviderPayload(form)
       
       if (editingId) {
         const updated = await apiFetch<ProveedorRow>(`/api/proveedores/${editingId}`, {
           method: "PUT",
-          body: form,
+          body: payload,
         })
         setRows(prev => prev.map(r => r.id === editingId ? { ...r, ...updated } : r))
         setOpen(false)
       } else {
         const created = await apiFetch<ProveedorRow>("/api/proveedores", {
           method: "POST",
-          body: form,
+          body: payload,
         })
         setRows(prev => [created, ...prev])
       }

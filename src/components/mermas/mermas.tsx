@@ -22,36 +22,20 @@ import {
   PlusSignIcon,
 } from "@hugeicons/core-free-icons"
 import { apiFetch } from "@/lib/api/client"
+import type { ApiProduct } from "@/lib/api/types"
+import { filterCatalogProducts } from "@/components/shared/product-catalog-utils"
+import {
+  LOSS_REASONS,
+  applyLossStock,
+  buildLossPayload,
+  calculateCartCount,
+  mapProductForLoss,
+  type CartItem,
+  type Product,
+} from "@/components/mermas/inventory-loss-utils"
 import { toast } from "sonner"
 
-type Product = {
-  id: number
-  name: string
-  category: string
-  price: number
-  stock: number
-  barcode: string
-  bg: string
-}
-
-type CartItem = { product: Product; quantity: number }
-
-const CATEGORY_ACCENTS: Record<string, string> = {
-  bebidas: "#f0f9ff",
-  snacks: "#fff7ed",
-  lacteos: "#eff6ff",
-  panaderia: "#fffbeb",
-  limpieza: "#ecfeff",
-}
-
-function normalizeCategory(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}+/gu, "")
-}
-
+/** Registra bajas de inventario por caducidad, dano, robo u otros motivos. */
 export function Mermas() {
   const [productos, setProductos] = React.useState<Product[]>([])
   const [cart, setCart] = React.useState<CartItem[]>([])
@@ -67,21 +51,9 @@ export function Mermas() {
     const loadData = async () => {
       try {
         setLoading(true)
-        const prodData = await apiFetch<any[]>("/api/products") 
+        const prodData = await apiFetch<ApiProduct[]>("/api/products")
         if (active) {
-          setProductos(prodData.map(item => {
-            const normalizedCategory = normalizeCategory(item.category || "")
-            const bg = CATEGORY_ACCENTS[normalizedCategory] ?? "#f8fafc"
-            return {
-              id: Number(item.id),
-              name: item.name,
-              category: item.category || "General",
-              price: Number(item.price),
-              stock: Number(item.stock),
-              barcode: item.barcode ?? "",
-              bg
-            }
-          }))
+          setProductos(prodData.map(mapProductForLoss))
         }
       } catch (error) {
         console.error("Error cargando datos:", error)
@@ -94,16 +66,10 @@ export function Mermas() {
   }, [])
 
   const filteredProducts = React.useMemo(() => {
-    const term = deferredSearch.trim().toLowerCase()
-    if (!term) return productos
-    return productos.filter((p) => 
-      p.name.toLowerCase().includes(term) || 
-      p.barcode.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term)
-    )
+    return filterCatalogProducts(productos, deferredSearch)
   }, [deferredSearch, productos])
 
-  const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
+  const cartCount = calculateCartCount(cart)
 
   function addToCart(p: Product) {
     if (p.stock <= 0) {
@@ -139,13 +105,7 @@ export function Mermas() {
     if (cart.length === 0) return
     setIsSubmitting(true)
     try {
-      const payload = {
-        motivo: motivo,
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity
-        }))
-      }
+      const payload = buildLossPayload(motivo, cart)
       
       await apiFetch("/api/mermas", {
         method: "POST",
@@ -155,12 +115,7 @@ export function Mermas() {
       toast.success("Mermas registradas y stock descontado.")
       setCart([])
       
-      // Update local stock
-      setProductos(prev => prev.map(p => {
-        const inCart = cart.find(c => c.product.id === p.id)
-        if (inCart) return { ...p, stock: Math.max(0, p.stock - inCart.quantity) }
-        return p
-      }))
+      setProductos((prev) => applyLossStock(prev, cart))
 
     } catch (error) {
       toast.error((error as Error).message)
@@ -194,10 +149,9 @@ export function Mermas() {
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Caducidad">Caducidad</SelectItem>
-                  <SelectItem value="Dañado / Roto">Dañado / Roto</SelectItem>
-                  <SelectItem value="Robo / Pérdida">Robo / Pérdida</SelectItem>
-                  <SelectItem value="Consumo Interno">Consumo Interno</SelectItem>
+                  {LOSS_REASONS.map((reason) => (
+                    <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

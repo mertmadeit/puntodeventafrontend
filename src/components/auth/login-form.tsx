@@ -17,6 +17,7 @@ import { fetchInventory } from "@/lib/api/inventory"
 import { toast } from "sonner"
 import { ApiConfigDialog } from "@/components/api-config-dialog"
 
+/** Formulario de acceso que autentica y guarda la sesion local del usuario. */
 export function LoginForm({
   className,
   ...props

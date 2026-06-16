@@ -49,89 +49,17 @@ import {
   deleteUser,
   updateUser,
 } from "@/lib/api/users"
-import type { ApiUser } from "@/lib/api/types"
+import {
+  EMPTY_FORM,
+  getInitials,
+  mapApiUser,
+  updateSidebarUserCache,
+  type FormValues,
+  type UserRow,
+} from "@/components/usuarios/user-utils"
+export type { UserRow } from "@/components/usuarios/user-utils"
 
-export type UserRow = {
-  id: number
-  image?: string
-  name: string
-  email: string
-  role: string
-  status: "Activo" | "Inactivo"
-}
-
-type FormValues = {
-  image: string
-  name: string
-  email: string
-  role: string
-  status: "Activo" | "Inactivo"
-}
-
-const EMPTY_FORM: FormValues = {
-  image: "",
-  name: "",
-  email: "",
-  role: "vendedor",
-  status: "Activo",
-}
-
-function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
-}
-
-function normalizeStatus(status: string): UserRow["status"] {
-  return status.toLowerCase() === "inactivo" ? "Inactivo" : "Activo"
-}
-
-function mapApiUser(user: ApiUser): UserRow {
-  return {
-    id: Number(user.id),
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    status: normalizeStatus(user.status),
-    image: user.imageUrl ?? "",
-  }
-}
-
-function updateSidebarUserCache(user: UserRow) {
-  if (typeof window === "undefined") return
-
-  try {
-    const stored = localStorage.getItem("auth.sidebarUser")
-    const parsed = stored ? JSON.parse(stored) as Record<string, unknown> : null
-    const storedEmail = typeof parsed?.email === "string" ? parsed.email : ""
-    const storedId = parsed?.id !== undefined && parsed?.id !== null ? String(parsed.id) : ""
-    const fallbackName = localStorage.getItem("pos.cashierName") || ""
-    const fallbackEmail = fallbackName ? `${fallbackName}@pdv.local` : ""
-
-    if (storedId && storedId !== String(user.id)) return
-    if (!storedId && storedEmail && storedEmail !== user.email) return
-    if (!storedId && !storedEmail && fallbackEmail !== user.email) return
-
-    const nextUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.image ?? "",
-      imageUrl: user.image ?? "",
-    }
-
-    localStorage.setItem("auth.sidebarUser", JSON.stringify(nextUser))
-    window.dispatchEvent(new CustomEvent("sidebar-user-updated", { detail: nextUser }))
-  } catch {
-    // ignore storage limits
-  }
-}
-
+/** Tabla de administracion de usuarios con alta, edicion y baja logica. */
 export function DataTable({ data: initialData }: { data: UserRow[] }) {
   const [rows, setRows] = React.useState<UserRow[]>(initialData)
   const [form, setForm] = React.useState<FormValues>(EMPTY_FORM)

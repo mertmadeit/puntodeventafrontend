@@ -10,6 +10,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+/** Renderiza enlaces principales del sidebar. */
 export function NavMain({
   items,
 }: {

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+/** Dialogo para ajustar la URL del backend cuando se prueba contra otra API. */
 export function ApiConfigDialog({
   open,
   onOpenChange,

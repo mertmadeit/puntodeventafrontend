@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 
 
+/** Renderiza accesos de seguridad y administracion del sistema. */
 export function NavSeguridad({
   items,
 }: {

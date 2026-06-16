@@ -14,8 +14,9 @@ import { DataTable, type UserRow } from "@/components/ventas/data-table"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ChartUpIcon } from "@hugeicons/core-free-icons"
 import { fetchSales } from "@/lib/api/sales"
-import type { ApiSale } from "@/lib/api/types"
+import { mapApiSaleToRow } from "@/components/ventas/sales-utils"
 
+/** Pantalla de ventas: carga tickets y entrega los datos a la tabla de seguimiento. */
 export function Ventas() {
     const [ventas, setVentas] = React.useState<UserRow[]>([])
     const [loading, setLoading] = React.useState(true)
@@ -30,19 +31,7 @@ export function Ventas() {
           setErrorMessage(null)
           const data = await fetchSales()
           if (!active) return
-          const mapped = data.map((sale: ApiSale) => ({
-            id: Number(sale.id),
-            ticketId: sale.ticketId,
-            dateTime: sale.dateTime,
-            cashier: sale.cashier,
-            client: sale.client,
-            total: Number(sale.total),
-            paymentMethod: sale.paymentMethod as UserRow["paymentMethod"],
-            status: sale.status as UserRow["status"],
-            items: sale.items ?? [],
-            cancellationReason: sale.cancellationReason,
-          }))
-          setVentas(mapped)
+          setVentas(data.map(mapApiSaleToRow))
         } catch (error) {
           if (!active) return
           const message = error instanceof Error ? error.message : "No se pudo cargar ventas"

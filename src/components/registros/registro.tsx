@@ -17,6 +17,7 @@ import { ChartUpIcon } from "@hugeicons/core-free-icons"
 import { fetchAuditLogs } from "@/lib/api/audit"
 import type { ApiAuditLog } from "@/lib/api/types"
 
+/** Pantalla de auditoria que carga y muestra eventos recientes del sistema. */
 export function Registro() {
 	const [registrosAuditoria, setRegistrosAuditoria] = React.useState<UserRow[]>([])
 	const [loading, setLoading] = React.useState(true)

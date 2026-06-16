@@ -12,6 +12,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+/** Renderiza enlaces secundarios al final del sidebar. */
 export function NavSecondary({
   items,
   ...props

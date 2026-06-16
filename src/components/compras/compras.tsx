@@ -22,47 +22,22 @@ import {
   PlusSignIcon,
 } from "@hugeicons/core-free-icons"
 import { apiFetch } from "@/lib/api/client"
+import type { ApiProduct } from "@/lib/api/types"
+import { filterCatalogProducts } from "@/components/shared/product-catalog-utils"
+import {
+  applyPurchasedStock,
+  buildPurchasePayload,
+  calculateCartCount,
+  calculatePurchaseTotal,
+  currencyFormatter,
+  mapProductForPurchase,
+  type CartItem,
+  type Product,
+  type Provider,
+} from "@/components/compras/purchase-utils"
 import { toast } from "sonner"
 
-type Product = {
-  id: number
-  name: string
-  category: string
-  price: number
-  stock: number
-  barcode: string
-  bg: string
-}
-
-type Provider = {
-  id: number
-  nombre: string
-}
-
-type CartItem = { product: Product; quantity: number; costo: number }
-
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-})
-
-const CATEGORY_ACCENTS: Record<string, string> = {
-  bebidas: "#f0f9ff",
-  snacks: "#fff7ed",
-  lacteos: "#eff6ff",
-  panaderia: "#fffbeb",
-  limpieza: "#ecfeff",
-}
-
-function normalizeCategory(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}+/gu, "")
-}
-
+/** Gestiona compras a proveedores y arma el carrito de entrada de inventario. */
 export function Compras() {
   const [proveedores, setProveedores] = React.useState<Provider[]>([])
   const [productos, setProductos] = React.useState<Product[]>([])
@@ -82,24 +57,12 @@ export function Compras() {
         
         const [provData, prodData] = await Promise.all([
           apiFetch<Provider[]>("/api/proveedores"),
-          apiFetch<any[]>("/api/products") 
+          apiFetch<ApiProduct[]>("/api/products")
         ])
         
         if (active) {
           setProveedores(provData)
-          setProductos(prodData.map(item => {
-            const normalizedCategory = normalizeCategory(item.category || "")
-            const bg = CATEGORY_ACCENTS[normalizedCategory] ?? "#f8fafc"
-            return {
-              id: Number(item.id),
-              name: item.name,
-              category: item.category || "General",
-              price: Number(item.price),
-              stock: Number(item.stock),
-              barcode: item.barcode ?? "",
-              bg
-            }
-          }))
+          setProductos(prodData.map(mapProductForPurchase))
         }
       } catch (error) {
         console.error("Error cargando datos:", error)
@@ -112,17 +75,11 @@ export function Compras() {
   }, [])
 
   const filteredProducts = React.useMemo(() => {
-    const term = deferredSearch.trim().toLowerCase()
-    if (!term) return productos
-    return productos.filter((p) => 
-      p.name.toLowerCase().includes(term) || 
-      p.barcode.toLowerCase().includes(term) ||
-      p.category.toLowerCase().includes(term)
-    )
+    return filterCatalogProducts(productos, deferredSearch)
   }, [deferredSearch, productos])
 
-  const total = React.useMemo(() => cart.reduce((s, i) => s + i.costo * i.quantity, 0), [cart])
-  const cartCount = cart.reduce((s, i) => s + i.quantity, 0)
+  const total = React.useMemo(() => calculatePurchaseTotal(cart), [cart])
+  const cartCount = calculateCartCount(cart)
 
   function addToCart(p: Product) {
     setCart((prev) => {
@@ -164,14 +121,7 @@ export function Compras() {
     if (!selectedProveedorId || cart.length === 0) return
     setIsSubmitting(true)
     try {
-      const payload = {
-        proveedorId: Number(selectedProveedorId),
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          costo: item.costo
-        }))
-      }
+      const payload = buildPurchasePayload(selectedProveedorId, cart)
       
       await apiFetch("/api/compras", {
         method: "POST",
@@ -183,12 +133,7 @@ export function Compras() {
       setSelectedProveedorId("")
       setSearch("")
 
-      // Update local stock immediately for better UX
-      setProductos(prev => prev.map(p => {
-        const inCart = cart.find(c => c.product.id === p.id)
-        if (inCart) return { ...p, stock: p.stock + inCart.quantity }
-        return p
-      }))
+      setProductos((prev) => applyPurchasedStock(prev, cart))
 
     } catch (error) {
       toast.error((error as Error).message)

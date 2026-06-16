@@ -24,33 +24,10 @@ import {
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { LinkCircleIcon, Logout01Icon, MoreVerticalCircle01Icon } from "@hugeicons/core-free-icons"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
 import { ApiConfigDialog } from "@/components/api-config-dialog"
+import { formatRole, getInitials } from "@/components/shared/user-display-utils"
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-  return name.trim().slice(0, 2).toUpperCase() || "U"
-}
-
-function formatRole(role?: string) {
-  if (!role) return "Usuario"
-  if (role === "admin") return "Administrador"
-  if (role === "supervisor") return "Supervisor"
-  if (role === "vendedor") return "Caja"
-  return role
-}
-
+/** Menu de usuario con acciones de configuracion y cierre de sesion. */
 function NavUserComponent({
   user,
 }: {

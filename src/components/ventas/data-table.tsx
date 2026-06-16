@@ -44,50 +44,16 @@ import {
 } from "@hugeicons/core-free-icons"
 import { toast } from "sonner"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  formatSaleDateTime,
+  matchesDateFilter,
+  type DateFilter,
+  type PaymentMethod,
+  type SaleStatus,
+  type UserRow,
+} from "@/components/ventas/sales-utils"
+export type { UserRow } from "@/components/ventas/sales-utils"
 
-type SaleStatus = "Pagado" | "Cancelado" | "Devuelto"
-type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia"
-type DateFilter = "all" | "ayer" | "semana" | "mes"
-
-type SaleItem = {
-  name: string
-  quantity: number
-}
-
-const saleDateTimeFormatter = new Intl.DateTimeFormat("es-MX", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-})
-
-function formatSaleDateTime(value: string) {
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return value
-  return saleDateTimeFormatter.format(parsed)
-}
-
-export type UserRow = {
-  id: number
-  ticketId: string
-  dateTime: string
-  cashier: string
-  client: string
-  total: number
-  paymentMethod: PaymentMethod
-  status: SaleStatus
-  items: SaleItem[]
-  cancellationReason?: string
-}
-
+/** Tabla de ventas con filtros, detalle de ticket y acciones de cancelacion. */
 export function DataTable({
   data: initialData,
 }: {
@@ -110,6 +76,8 @@ export function DataTable({
   const pageSize = 10
 
   React.useEffect(() => {
+    // Local row state supports optimistic cancel updates after the initial server data arrives.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRows(initialData)
   }, [initialData])
 
@@ -126,29 +94,6 @@ export function DataTable({
       })),
     [rows]
   )
-
-  function matchesDateFilter(saleDate: Date, filter: DateFilter) {
-    if (filter === "all") return true
-
-    const now = new Date()
-
-    if (Number.isNaN(saleDate.getTime())) return false
-
-    if (filter === "ayer") {
-      const yesterday = new Date(now)
-      yesterday.setDate(now.getDate() - 1)
-      return saleDate.toDateString() === yesterday.toDateString()
-    }
-
-    if (filter === "semana") {
-      const start = new Date(now)
-      start.setDate(now.getDate() - 7)
-      return saleDate >= start && saleDate <= now
-    }
-
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    return saleDate >= startOfMonth && saleDate <= now
-  }
 
   const normalizedSearch = deferredSearch.trim().toLowerCase()
   const hasActiveFilters =

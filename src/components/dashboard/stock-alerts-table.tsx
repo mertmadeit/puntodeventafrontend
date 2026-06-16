@@ -36,10 +36,12 @@ type ExampleProduct = {
   stockMinimo: number
 }
 
+/** Traduce el tipo de alerta de stock a texto visible. */
 function alertLabel(kind: StockAlertKind) {
   return kind === "sin-stock" ? "Sin stock" : "Stock bajo"
 }
 
+/** Construye filas de alerta a partir de productos con stock bajo o agotado. */
 function buildAlertRows(productos: ExampleProduct[]): StockAlertRow[] {
   const results: StockAlertRow[] = []
 
@@ -78,6 +80,7 @@ function buildAlertRows(productos: ExampleProduct[]): StockAlertRow[] {
   return results
 }
 
+/** Tabla compacta de alertas de stock para el dashboard. */
 export function StockAlertsTable() {
   const [products, setProducts] = React.useState<ExampleProduct[]>([])
   const [loading, setLoading] = React.useState(true)

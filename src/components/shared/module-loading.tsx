@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton"
 
+/** Estado de carga reutilizable para modulos del dashboard. */
 export function ModuleLoading() {
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">

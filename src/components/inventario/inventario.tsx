@@ -11,16 +11,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DataTable, type InventoryRow } from "@/components/inventario/data-table"
+import { DataTable } from "@/components/inventario/data-table"
+import {
+  currencyFormatter,
+  mapInventoryItemToRow,
+  type InventoryRow,
+} from "@/components/inventario/inventory-utils"
 import { fetchInventory } from "@/lib/api/inventory"
-import type { ApiInventoryItem } from "@/lib/api/types"
 
-const currencyFormatter = new Intl.NumberFormat("es-MX", {
-  style: "currency",
-  currency: "MXN",
-  minimumFractionDigits: 2,
-})
-
+/** Pantalla de inventario: carga productos, calcula resumenes y muestra la tabla editable. */
 export function Inventario() {
   const [productos, setProductos] = React.useState<InventoryRow[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -35,17 +34,7 @@ export function Inventario() {
         setErrorMessage(null)
         const data = await fetchInventory()
         if (!active) return
-        const mapped = data.map((item: ApiInventoryItem) => ({
-          id: Number(item.id),
-          producto: item.name,
-          categoria: item.category,
-          codigoBarras: item.barcode ?? "",
-          stock: Number(item.stock),
-          stockMinimo: Number(item.minStock),
-          precio: Number(item.price),
-          unidad: item.unit,
-        }))
-        setProductos(mapped)
+        setProductos(data.map(mapInventoryItemToRow))
       } catch (error) {
         if (!active) return
         const message = error instanceof Error ? error.message : "No se pudo cargar inventario"

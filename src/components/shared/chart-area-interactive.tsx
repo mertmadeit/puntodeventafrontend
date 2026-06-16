@@ -50,16 +50,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+/** Grafica interactiva de ventas por metodo de pago en el dashboard. */
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState(() => (isMobile ? "7d" : "90d"))
   const [series, setSeries] = React.useState<ApiDashboardSeriesPoint[]>(EMPTY_SERIES)
   const [loading, setLoading] = React.useState(true)
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-
-  React.useLayoutEffect(() => {
-    setTimeRange(isMobile ? "7d" : "90d")
-  }, [isMobile])
 
   React.useEffect(() => {
     let active = true

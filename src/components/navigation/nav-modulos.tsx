@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 
 
+/** Renderiza grupos de modulos con soporte para secciones colapsables. */
 export function NavModulos({
   items,
 }: {

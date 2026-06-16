@@ -14,6 +14,7 @@ export type FormValues = {
   image: string
   name: string
   email: string
+  password: string
   role: string
   status: "Activo" | "Inactivo"
 }
@@ -22,6 +23,7 @@ export const EMPTY_FORM: FormValues = {
   image: "",
   name: "",
   email: "",
+  password: "",
   role: "vendedor",
   status: "Activo",
 }

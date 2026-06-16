@@ -112,6 +112,7 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
       image: row.image ?? "",
       name: row.name,
       email: row.email,
+      password: "",
       role: row.role,
       status: row.status,
     })
@@ -141,11 +142,21 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
 
   async function saveRow() {
     if (!form.name.trim() || !form.email.trim()) return
+    const password = form.password.trim()
+    if (!isEditing && !password) {
+      setErrorMessage("La contrasena es requerida para crear el usuario")
+      return
+    }
+    if (password && password.length < 6) {
+      setErrorMessage("La contrasena debe tener al menos 6 caracteres")
+      return
+    }
 
     const payload = {
       imageUrl: form.image.trim(),
       name: form.name.trim(),
       email: form.email.trim(),
+      ...(password ? { password } : {}),
       role: form.role,
       status: form.status,
     }
@@ -450,6 +461,32 @@ export function DataTable({ data: initialData }: { data: UserRow[] }) {
                       }))
                     }
                   />
+                </div>
+
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label htmlFor="user-password">
+                    {isEditing ? "Nueva contrasena" : "Contrasena"}
+                  </Label>
+                  <Input
+                    id="user-password"
+                    placeholder={isEditing ? "Dejar vacia para conservar la actual" : "Contrasena"}
+                    type="password"
+                    autoComplete="new-password"
+                    required={!isEditing}
+                    minLength={6}
+                    value={form.password}
+                    onChange={(event) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        password: event.target.value,
+                      }))
+                    }
+                  />
+                  {isEditing ? (
+                    <p className="text-xs text-muted-foreground">
+                      Solo se actualiza si escribes una nueva contrasena.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </div>

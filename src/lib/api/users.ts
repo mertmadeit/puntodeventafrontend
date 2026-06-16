@@ -4,6 +4,7 @@ import type { ApiUser } from "@/lib/api/types"
 export type UserPayload = {
   name: string
   email: string
+  password?: string
   role: string
   status: string
   imageUrl?: string

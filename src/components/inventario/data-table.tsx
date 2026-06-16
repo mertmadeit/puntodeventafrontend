@@ -249,7 +249,8 @@ export function DataTable({
       toast.success("Producto eliminado")
     } catch (error) {
       console.error("Error deleting product:", error)
-      toast.error("No se pudo eliminar el producto porque puede tener datos asociados.")
+      const message = error instanceof Error ? error.message : "No se pudo eliminar el producto."
+      toast.error(message)
       setDeletingId(null)
     }
   }

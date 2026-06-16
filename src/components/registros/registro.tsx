@@ -64,6 +64,7 @@ export function Registro() {
 	const totalCancelaciones = registrosAuditoria.filter((registro) => registro.evento === "CANCELACION").length
 	const totalCambiosPrecio = registrosAuditoria.filter((registro) => registro.evento === "CAMBIO_DE_PRECIO").length
 	const totalEdiciones = registrosAuditoria.filter((registro) => registro.evento === "EDICION").length
+	const totalMermas = registrosAuditoria.filter((registro) => registro.evento === "MERMA").length
 
 	return (
 		<div className="flex flex-col gap-4 px-4 lg:px-6">
@@ -93,7 +94,7 @@ export function Registro() {
 							<HugeiconsIcon icon={ChartUpIcon} strokeWidth={2} className="size-4" />
 						</div>
 						<div className="text-muted-foreground">
-							{totalLogins} logins, {totalCancelaciones} cancelaciones, {totalEdiciones} ediciones
+							{totalLogins} logins, {totalCancelaciones} cancelaciones, {totalEdiciones} ediciones, {totalMermas} mermas
 						</div>
 					</CardFooter>
 				</Card>
@@ -110,7 +111,7 @@ export function Registro() {
 					</CardHeader>
 					<CardFooter className="flex-col items-start gap-1.5 text-sm">
 						<div className="line-clamp-1 flex gap-2 font-medium">Cambios de precio detectados</div>
-						<div className="text-muted-foreground">{totalCambiosPrecio} ajustes registrados hoy</div>
+						<div className="text-muted-foreground">{totalCambiosPrecio} ajustes registrados</div>
 					</CardFooter>
 				</Card>
 			</div>

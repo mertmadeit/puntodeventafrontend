@@ -9,6 +9,12 @@ type ApiRequestOptions = {
   signal?: AbortSignal
 }
 
+/**
+ * Cliente HTTP central del frontend.
+ * Resuelve la URL base, agrega autenticacion, serializa el cuerpo,
+ * parsea respuestas y normaliza errores para que el resto de `src/lib/api`
+ * solo tenga que declarar endpoints y payloads.
+ */
 export class ApiError extends Error {
   status: number
   payload: unknown
@@ -20,6 +26,7 @@ export class ApiError extends Error {
   }
 }
 
+/** Error especifico cuando la app no logra conectar con la API. */
 export class ApiConnectionError extends Error {
   url: string
 
@@ -29,10 +36,12 @@ export class ApiConnectionError extends Error {
   }
 }
 
+/** Detecta si estamos en produccion para decidir de donde leer la URL base. */
 function isProduction() {
   return process.env.NODE_ENV === "production"
 }
 
+/** Permite validar que la URL guardada sea local antes de usarla como override. */
 function isLocalhostUrl(value: string) {
   try {
     const url = new URL(value)
@@ -42,6 +51,10 @@ function isLocalhostUrl(value: string) {
   }
 }
 
+/**
+ * Obtiene la URL base de la API.
+ * Prioriza la variable de entorno y, en local, permite override desde storage.
+ */
 function getBaseUrl() {
   let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
 
@@ -73,6 +86,7 @@ function getBaseUrl() {
   return normalizedBaseUrl
 }
 
+/** Construye la URL final combinando base, ruta y query params. */
 function buildUrl(path: string, query?: QueryParams) {
   const baseUrl = getBaseUrl()
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
@@ -88,6 +102,7 @@ function buildUrl(path: string, query?: QueryParams) {
   return url.toString()
 }
 
+/** Lee el token guardado por el login para enviarlo en Authorization. */
 function getAuthToken() {
   if (typeof window === "undefined") return null
   try {
@@ -97,6 +112,7 @@ function getAuthToken() {
   }
 }
 
+/** Limpia la sesion local y las cookies de autenticacion cuando el backend rechaza acceso. */
 function clearAuthSession() {
   try {
     localStorage.removeItem("auth.token")
@@ -112,6 +128,7 @@ function clearAuthSession() {
   }
 }
 
+/** Convierte la respuesta HTTP en JSON o texto segun el content-type. */
 async function parseResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? ""
   if (contentType.includes("application/json")) {
@@ -121,6 +138,7 @@ async function parseResponse(response: Response) {
   return response.text().catch(() => null)
 }
 
+/** Extrae un mensaje humano desde distintas formas de error de backend. */
 function getErrorMessage(payload: unknown, fallback: string) {
   if (typeof payload === "string" && payload.trim().length > 0) {
     return payload
@@ -137,6 +155,13 @@ function getErrorMessage(payload: unknown, fallback: string) {
   return fallback
 }
 
+/**
+ * Envia requests al backend.
+ * - agrega token si corresponde
+ * - serializa JSON
+ * - maneja 401 limpiando sesion
+ * - lanza errores tipados con mensaje util para UI
+ */
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}) {
   const { method = "GET", body, headers, auth = true, query, signal } = options
   const url = buildUrl(path, query)

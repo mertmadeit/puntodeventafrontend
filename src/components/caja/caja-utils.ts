@@ -12,6 +12,8 @@ export type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia"
 export type SaleTicket = {
   id: string
   items: CartItem[]
+  subtotal: number
+  iva: number
   total: number
   method: PaymentMethod
   change: number
@@ -104,7 +106,12 @@ export function buildSalePayloadItems(cart: CartItem[]) {
 /** Formatea la hora del ticket devuelto por backend. */
 export function formatTicketTime(dateTime: string) {
   return new Date(dateTime).toLocaleString("es-MX", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   })
 }

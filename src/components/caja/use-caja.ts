@@ -197,14 +197,16 @@ export function useCaja() {
       setLastTicket({
         id: created.ticketId,
         items: [...cart],
-        total,
+        subtotal: created.subtotal ?? subtotal,
+        iva: created.iva ?? igv,
+        total: created.total ?? total,
         method: paymentMethod,
-        change: paymentMethod === "Efectivo" ? change : 0,
+        change: paymentMethod === "Efectivo" ? cashNum - (created.total ?? total) : 0,
         client: clientName || DEFAULT_CLIENT,
         date: formatTicketTime(created.dateTime),
       })
       setSalesCount((count) => count + 1)
-      setSalesToday((amount) => amount + total)
+      setSalesToday((amount) => amount + (created.total ?? total))
       setTicketOpen(true)
       setCart([])
       setCashGiven("")
@@ -212,7 +214,7 @@ export function useCaja() {
     } catch {
       // keep local state as-is if backend sale fails
     }
-  }, [canPay, cart, paymentMethod, clientName, cashNum, total, change])
+  }, [canPay, cart, paymentMethod, clientName, cashNum, subtotal, igv, total])
 
   const closeShift = React.useCallback(() => {
     try {

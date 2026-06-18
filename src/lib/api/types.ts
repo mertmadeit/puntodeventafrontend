@@ -39,6 +39,8 @@ export type ApiSale = {
   dateTime: string
   cashier: string
   client: string
+  subtotal?: number
+  iva?: number
   total: number
   paymentMethod: string
   status: string

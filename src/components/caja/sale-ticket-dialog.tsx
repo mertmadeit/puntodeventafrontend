@@ -73,6 +73,14 @@ export function SaleTicketDialog({
                 </div>
               ))}
               <Separator className="my-2" />
+              <div className="flex justify-between py-0.5 text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="tabular-nums">$ {ticket.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between py-0.5 text-muted-foreground">
+                <span>IVA (16%)</span>
+                <span className="tabular-nums">$ {ticket.iva.toFixed(2)}</span>
+              </div>
               <div className="flex justify-between font-semibold text-base">
                 <span>Total</span>
                 <span className="tabular-nums">$ {ticket.total.toFixed(2)}</span>

@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { apiFetch } from "@/lib/api/client"
 import {
 	createTesoreriaCorte,
 	createTesoreriaMovimiento,
@@ -63,6 +64,12 @@ type MovimientoCategoria = "operativo" | "proveedor" | "otro"
 
 type MovimientoCaja = ApiTesoreriaMovimiento
 
+type ProveedorOption = {
+	id: number | string
+	nombre: string
+	activo?: boolean
+}
+
 type TurnoActivo = ApiTesoreriaTurno
 
 type GastoDia = {
@@ -84,6 +91,7 @@ export function Tesoreria() {
 	const [movimientos, setMovimientos] = React.useState<MovimientoCaja[]>([])
 	const [cortes, setCortes] = React.useState<CorteCaja[]>([])
 	const [turnosActivos, setTurnosActivos] = React.useState<TurnoActivo[]>([])
+	const [proveedores, setProveedores] = React.useState<ProveedorOption[]>([])
 	const [loading, setLoading] = React.useState(true)
 	const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
 
@@ -108,11 +116,12 @@ export function Tesoreria() {
 			try {
 				setLoading(true)
 				setErrorMessage(null)
-				const [resumen, movimientosData, cortesData, turnosData] = await Promise.all([
+				const [resumen, movimientosData, cortesData, turnosData, proveedoresData] = await Promise.all([
 					fetchTesoreriaResumen(),
 					fetchTesoreriaMovimientos(),
 					fetchTesoreriaCortes(),
 					fetchTesoreriaTurnos(),
+					apiFetch<ProveedorOption[]>("/api/proveedores"),
 				])
 				if (!active) return
 				setFondoCaja(Number(resumen.fondoCaja) || 0)
@@ -122,6 +131,7 @@ export function Tesoreria() {
 				setMovimientos(movimientosData)
 				setCortes(cortesData)
 				setTurnosActivos(turnosData)
+				setProveedores(proveedoresData.filter((proveedor) => proveedor.activo !== false))
 				if (turnosData.length > 0) {
 					setTurnoCorteId(turnosData[0].id)
 				}
@@ -169,6 +179,8 @@ export function Tesoreria() {
 	)
 
 	const dineroDigital = ventasTarjeta + transferencias
+	const requiereProveedor = movimientoTipo === "retiro" && movimientoCategoria === "proveedor"
+	const puedeGuardarMovimiento = !savingMovimiento && (!requiereProveedor || movimientoProveedor !== "")
 
 	const gastosDia = React.useMemo<GastoDia[]>(
 		() =>
@@ -207,7 +219,8 @@ export function Tesoreria() {
 	async function guardarMovimientoCaja() {
 		const concepto = movimientoConcepto.trim()
 		const monto = Number.parseFloat(movimientoMonto)
-		const proveedor = movimientoProveedor.trim()
+		const proveedorSeleccionado = proveedores.find((proveedor) => String(proveedor.id) === movimientoProveedor)
+		const proveedor = proveedorSeleccionado?.nombre.trim() ?? ""
 
 		if (!concepto) return
 		if (!Number.isFinite(monto) || monto <= 0) return
@@ -570,7 +583,10 @@ export function Tesoreria() {
 							<Label>Tipo de movimiento</Label>
 							<Select
 								value={movimientoTipo}
-								onValueChange={(value) => setMovimientoTipo(value as MovimientoTipo)}
+								onValueChange={(value) => {
+									setMovimientoTipo(value as MovimientoTipo)
+									if (value !== "retiro") setMovimientoProveedor("")
+								}}
 							>
 								<SelectTrigger className="h-11 rounded-lg bg-background">
 									<SelectValue placeholder="Selecciona tipo" />
@@ -586,7 +602,10 @@ export function Tesoreria() {
 							<Label>Categoria</Label>
 							<Select
 								value={movimientoCategoria}
-								onValueChange={(value) => setMovimientoCategoria(value as MovimientoCategoria)}
+								onValueChange={(value) => {
+									setMovimientoCategoria(value as MovimientoCategoria)
+									if (value !== "proveedor") setMovimientoProveedor("")
+								}}
 							>
 								<SelectTrigger className="h-11 rounded-lg bg-background">
 									<SelectValue placeholder="Selecciona categoria" />
@@ -599,16 +618,25 @@ export function Tesoreria() {
 							</Select>
 						</div>
 
-						{movimientoTipo === "retiro" && movimientoCategoria === "proveedor" ? (
+						{requiereProveedor ? (
 							<div className="grid gap-2">
-								<Label htmlFor="movimiento-proveedor">Proveedor</Label>
-								<Input
-									id="movimiento-proveedor"
+								<Label>Proveedor</Label>
+								<Select
 									value={movimientoProveedor}
-									onChange={(event) => setMovimientoProveedor(event.target.value)}
-									placeholder="Ej. Panaderia San Pedro"
-									className="h-11 rounded-lg"
-								/>
+									onValueChange={setMovimientoProveedor}
+									disabled={proveedores.length === 0}
+								>
+									<SelectTrigger className="h-11 rounded-lg bg-background">
+										<SelectValue placeholder={proveedores.length ? "Selecciona proveedor" : "Sin proveedores activos"} />
+									</SelectTrigger>
+									<SelectContent>
+										{proveedores.map((proveedor) => (
+											<SelectItem key={proveedor.id} value={String(proveedor.id)}>
+												{proveedor.nombre}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						) : null}
 
@@ -641,7 +669,7 @@ export function Tesoreria() {
 						<Button type="button" variant="outline" className="h-11 rounded-lg" onClick={() => setMovimientoOpen(false)}>
 							Cancelar
 						</Button>
-						<Button type="button" className="h-11 rounded-lg" onClick={guardarMovimientoCaja} disabled={savingMovimiento}>
+						<Button type="button" className="h-11 rounded-lg" onClick={guardarMovimientoCaja} disabled={!puedeGuardarMovimiento}>
 							Guardar movimiento
 						</Button>
 					</SheetFooter>

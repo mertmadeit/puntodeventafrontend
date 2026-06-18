@@ -24,6 +24,10 @@ type CreateTesoreriaCortePayload = {
   diferencia: number
 }
 
+type CreateTesoreriaTurnoPayload = {
+  montoInicial: number
+}
+
 export async function fetchTesoreriaResumen() {
   return apiFetch<ApiTesoreriaResumen>("/api/tesoreria/resumen")
 }
@@ -38,6 +42,13 @@ export async function fetchTesoreriaCortes() {
 
 export async function fetchTesoreriaTurnos() {
   return apiFetch<ApiTesoreriaTurno[]>("/api/tesoreria/turnos")
+}
+
+export async function createTesoreriaTurno(payload: CreateTesoreriaTurnoPayload) {
+  return apiFetch<ApiTesoreriaTurno>("/api/tesoreria/turnos", {
+    method: "POST",
+    body: payload,
+  })
 }
 
 export async function createTesoreriaMovimiento(payload: CreateTesoreriaMovimientoPayload) {

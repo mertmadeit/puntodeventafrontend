@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { fetchProducts } from "@/lib/api/catalog"
 import { createSale, fetchSalesTodaySummary } from "@/lib/api/sales"
+import { createTesoreriaTurno } from "@/lib/api/tesoreria"
 import {
   DEFAULT_CLIENT,
   PAYMENT_METHOD_MAP,
@@ -221,6 +222,7 @@ export function useCaja() {
       localStorage.removeItem("pos.cashierName")
       localStorage.removeItem("auth.token")
       localStorage.removeItem("auth.role")
+      localStorage.removeItem("pos.turnoId")
       localStorage.removeItem("pos.openingAmount")
       localStorage.removeItem("pos.openingAt")
       document.cookie = "pos_cashier_name=; Path=/; Max-Age=0; SameSite=Lax"
@@ -232,7 +234,7 @@ export function useCaja() {
     window.location.href = "/login"
   }, [])
 
-  const confirmOpeningCash = React.useCallback(() => {
+  const confirmOpeningCash = React.useCallback(async () => {
     const parsed = Number.parseFloat(openingAmount.replace(",", "."))
     if (Number.isNaN(parsed) || parsed < 0) {
       setOpeningError("Ingresa un monto valido para apertura")
@@ -241,16 +243,44 @@ export function useCaja() {
 
     const normalized = Number(parsed.toFixed(2))
     try {
-      localStorage.setItem("pos.openingAmount", String(normalized))
-      localStorage.setItem("pos.openingAt", new Date().toISOString())
-    } catch {
-      // ignore storage access
+      const turno = await createTesoreriaTurno({ montoInicial: normalized })
+      const montoInicial = Number(turno.montoInicial) || normalized
+      localStorage.setItem("pos.turnoId", turno.id)
+      localStorage.setItem("pos.openingAmount", String(montoInicial))
+      localStorage.setItem("pos.openingAt", turno.horaApertura)
+      setOpeningAmount(montoInicial.toFixed(2))
+      setOpeningError("")
+      setOpeningDialogOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo abrir el turno"
+      setOpeningError(message)
     }
-
-    setOpeningAmount(normalized.toFixed(2))
-    setOpeningError("")
-    setOpeningDialogOpen(false)
   }, [openingAmount])
+
+  React.useEffect(() => {
+    if (openingDialogOpen) return
+    if (typeof window === "undefined") return
+
+    const storedTurno = localStorage.getItem("pos.turnoId")
+    const storedOpening = localStorage.getItem("pos.openingAmount")
+    const parsedOpening = Number.parseFloat(storedOpening ?? "")
+    if (storedTurno || !Number.isFinite(parsedOpening)) return
+
+    let active = true
+    createTesoreriaTurno({ montoInicial: Number(parsedOpening.toFixed(2)) })
+      .then((turno) => {
+        if (!active) return
+        localStorage.setItem("pos.turnoId", turno.id)
+        localStorage.setItem("pos.openingAt", turno.horaApertura)
+      })
+      .catch(() => {
+        // La siguiente operacion de caja mostrara el error real si la API sigue fallando.
+      })
+
+    return () => {
+      active = false
+    }
+  }, [openingDialogOpen])
 
   const closeTicket = React.useCallback(() => {
     setTicketOpen(false)

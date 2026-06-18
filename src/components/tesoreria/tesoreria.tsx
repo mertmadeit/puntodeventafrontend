@@ -260,6 +260,12 @@ export function Tesoreria() {
 				diferencia: diff,
 			})
 			setCortes((prev) => [created, ...prev].slice(0, 30))
+			setTurnosActivos((prev) => prev.filter((turno) => turno.id !== turnoCorteSeleccionado.id))
+			if (window.localStorage.getItem("pos.turnoId") === turnoCorteSeleccionado.id) {
+				window.localStorage.removeItem("pos.turnoId")
+				window.localStorage.removeItem("pos.openingAmount")
+				window.localStorage.removeItem("pos.openingAt")
+			}
 
 			setCorteContado("")
 			setCorteOpen(false)

@@ -16,6 +16,11 @@ export type ApiProduct = {
   imageUrl?: string
   providerId?: number | string
   providerName?: string
+  unitsSold30Days?: number
+  averageDailySales?: number
+  projectionBaseDate?: string
+  estimatedDaysRemaining?: number
+  estimatedStockoutDate?: string
 }
 
 export type ApiInventoryItem = {

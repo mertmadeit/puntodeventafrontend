@@ -22,9 +22,13 @@ type StockAlertRow = {
   id: number
   producto: string
   categoria: string
+  proveedor: string
   stock: number
   stockMinimo: number
   faltante: number
+  ventaPromedioDiaria: number
+  diasRestantes?: number
+  fechaAgotamiento?: string
   alerta: StockAlertKind
 }
 
@@ -32,13 +36,39 @@ type ExampleProduct = {
   id: number
   producto: string
   categoria: string
+  proveedor: string
   stock: number
   stockMinimo: number
+  ventaPromedioDiaria: number
+  diasRestantes?: number
+  fechaAgotamiento?: string
 }
 
 /** Traduce el tipo de alerta de stock a texto visible. */
 function alertLabel(kind: StockAlertKind) {
   return kind === "sin-stock" ? "Sin stock" : "Stock bajo"
+}
+
+/** Presenta la fecha SQL sin cambiarla por la zona horaria del navegador. */
+function formatDate(dateValue: string) {
+  const [year, month, day] = dateValue.split("-").map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  })
+}
+
+/** Resume la proyeccion basada en el consumo de los ultimos 30 dias. */
+function stockoutEstimate(row: StockAlertRow) {
+  if (row.stock <= 0) return "Ya agotado"
+  if (row.diasRestantes === undefined || !row.fechaAgotamiento) {
+    return "Sin consumo reciente"
+  }
+
+  return `${formatDate(row.fechaAgotamiento)} (${row.diasRestantes} día${
+    row.diasRestantes === 1 ? "" : "s"
+  })`
 }
 
 /** Construye filas de alerta a partir de productos con stock bajo o agotado. */
@@ -51,9 +81,13 @@ function buildAlertRows(productos: ExampleProduct[]): StockAlertRow[] {
         id: item.id,
         producto: item.producto,
         categoria: item.categoria,
+        proveedor: item.proveedor,
         stock: item.stock,
         stockMinimo: item.stockMinimo,
         faltante: Math.max(item.stockMinimo - item.stock, 0),
+        ventaPromedioDiaria: item.ventaPromedioDiaria,
+        diasRestantes: item.diasRestantes,
+        fechaAgotamiento: item.fechaAgotamiento,
         alerta: "sin-stock",
       })
       continue
@@ -64,9 +98,13 @@ function buildAlertRows(productos: ExampleProduct[]): StockAlertRow[] {
         id: item.id,
         producto: item.producto,
         categoria: item.categoria,
+        proveedor: item.proveedor,
         stock: item.stock,
         stockMinimo: item.stockMinimo,
         faltante: Math.max(item.stockMinimo - item.stock, 0),
+        ventaPromedioDiaria: item.ventaPromedioDiaria,
+        diasRestantes: item.diasRestantes,
+        fechaAgotamiento: item.fechaAgotamiento,
         alerta: "stock-bajo",
       })
     }
@@ -102,8 +140,15 @@ export function StockAlertsTable() {
           id: Number(item.id),
           producto: item.name,
           categoria: item.category,
+          proveedor: item.providerName?.trim() || "Sin proveedor",
           stock: Number(item.stock),
           stockMinimo: Number(item.minStock ?? 0),
+          ventaPromedioDiaria: Number(item.averageDailySales ?? 0),
+          diasRestantes:
+            item.estimatedDaysRemaining === undefined
+              ? undefined
+              : Number(item.estimatedDaysRemaining),
+          fechaAgotamiento: item.estimatedStockoutDate,
         }))
         setProducts(mapped)
       } catch (error) {
@@ -142,25 +187,32 @@ export function StockAlertsTable() {
     downloadPdfReport({
       filename: "reporte-stock-bajo-sin-stock.pdf",
       title: "Stock bajo / Sin stock",
-      subtitle: "Productos que requieren reposicion.",
+      subtitle: "Productos que requieren reposicion y su agotamiento estimado.",
       summary: [
         ["Sin stock", String(sinStock)],
         ["Stock bajo", String(stockBajo)],
         ["Total alertas", String(rows.length)],
+        ["Proyeccion", "Ventas pagadas de los ultimos 30 dias"],
       ],
       columns: [
         { header: "Producto", dataKey: "producto" },
+        { header: "Proveedor", dataKey: "proveedor" },
         { header: "Categoria", dataKey: "categoria" },
         { header: "Actual", dataKey: "stock" },
         { header: "Minimo", dataKey: "stockMinimo" },
-        { header: "Faltante", dataKey: "faltante" },
+        { header: "Venta/dia", dataKey: "ventaPromedioDiaria" },
+        { header: "Se agotaria", dataKey: "agotamientoEstimado" },
+        { header: "Reponer", dataKey: "faltante" },
         { header: "Alerta", dataKey: "alerta" },
       ],
       rows: rows.map((row) => ({
         producto: row.producto,
+        proveedor: row.proveedor,
         categoria: row.categoria,
         stock: row.stock,
         stockMinimo: row.stockMinimo,
+        ventaPromedioDiaria: row.ventaPromedioDiaria.toFixed(2),
+        agotamientoEstimado: stockoutEstimate(row),
         faltante: row.faltante,
         alerta: alertLabel(row.alerta),
       })),
@@ -199,10 +251,12 @@ export function StockAlertsTable() {
           <TableHeader className="bg-muted/20">
             <TableRow className="border-border/70">
               <TableHead className="px-5 py-4 font-semibold">Producto</TableHead>
+              <TableHead className="px-5 py-4 font-semibold">Proveedor</TableHead>
               <TableHead className="px-5 py-4 font-semibold">Categoria</TableHead>
               <TableHead className="px-5 py-4 text-right font-semibold">Actual</TableHead>
               <TableHead className="px-5 py-4 text-right font-semibold">Minimo</TableHead>
               <TableHead className="px-5 py-4 text-right font-semibold">Faltante</TableHead>
+              <TableHead className="px-5 py-4 font-semibold">Agotamiento estimado</TableHead>
               <TableHead className="px-5 py-4 font-semibold">Alerta</TableHead>
             </TableRow>
           </TableHeader>
@@ -218,6 +272,9 @@ export function StockAlertsTable() {
                       </span>
                     </div>
                   </TableCell>
+                  <TableCell className="px-5 py-4 text-sm text-muted-foreground">
+                    {row.proveedor}
+                  </TableCell>
                   <TableCell className="px-5 py-4 text-sm text-muted-foreground">{row.categoria}</TableCell>
                   <TableCell className="px-5 py-4 text-right text-sm font-medium text-muted-foreground">
                     {row.stock}
@@ -226,6 +283,9 @@ export function StockAlertsTable() {
                     {row.stockMinimo}
                   </TableCell>
                   <TableCell className="px-5 py-4 text-right text-sm font-semibold">{row.faltante}</TableCell>
+                  <TableCell className="min-w-48 px-5 py-4 text-sm text-muted-foreground">
+                    {stockoutEstimate(row)}
+                  </TableCell>
                   <TableCell className="px-5 py-4">
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
@@ -246,7 +306,7 @@ export function StockAlertsTable() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-sm text-muted-foreground">
                   No hay productos con stock bajo o sin stock.
                 </TableCell>
               </TableRow>

@@ -14,6 +14,8 @@ export type ApiProduct = {
   barcode?: string
   unit?: string
   imageUrl?: string
+  providerId?: number | string
+  providerName?: string
 }
 
 export type ApiInventoryItem = {
@@ -26,6 +28,8 @@ export type ApiInventoryItem = {
   price: number
   unit: string
   fechaCaducidad?: string
+  providerId?: number | string
+  providerName?: string
 }
 
 export type ApiSaleItem = {

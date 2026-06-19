@@ -51,6 +51,7 @@ import {
   MoreVerticalCircle01Icon,
 } from "@hugeicons/core-free-icons"
 import { fetchCategories } from "@/lib/api/catalog"
+import { apiFetch } from "@/lib/api/client"
 import type { ApiCategory } from "@/lib/api/types"
 import {
   createProduct,
@@ -69,6 +70,7 @@ import {
   stockBadgeClass,
   stockStateLabel,
   type InventoryRow,
+  type InventoryProvider,
   type InventoryTab,
   type ProductFormValues,
 } from "@/components/inventario/inventory-utils"
@@ -98,6 +100,9 @@ export function DataTable({
   const [categories, setCategories] = React.useState<ApiCategory[]>([])
   const [categoriesLoading, setCategoriesLoading] = React.useState(true)
   const [categoriesError, setCategoriesError] = React.useState<string | null>(null)
+  const [providers, setProviders] = React.useState<InventoryProvider[]>([])
+  const [providersLoading, setProvidersLoading] = React.useState(true)
+  const [providersError, setProvidersError] = React.useState<string | null>(null)
 
   const [editingPriceId, setEditingPriceId] = React.useState<number | null>(null)
   const [priceDraft, setPriceDraft] = React.useState("")
@@ -119,24 +124,35 @@ export function DataTable({
   React.useEffect(() => {
     let active = true
 
-    const loadCategories = async () => {
+    const loadOptions = async () => {
       try {
         setCategoriesLoading(true)
+        setProvidersLoading(true)
         setCategoriesError(null)
-        const data = await fetchCategories()
+        setProvidersError(null)
+        const [categoryData, providerData] = await Promise.all([
+          fetchCategories(),
+          apiFetch<InventoryProvider[]>("/api/proveedores"),
+        ])
         if (!active) return
-        setCategories(data)
+        setCategories(categoryData)
+        setProviders(providerData.filter((provider) => provider.activo !== false))
       } catch (error) {
         if (!active) return
-        const message = error instanceof Error ? error.message : "No se pudieron cargar categorias"
+        const message = error instanceof Error ? error.message : "No se pudieron cargar las opciones"
         setCategoriesError(message)
+        setProvidersError(message)
         setCategories([])
+        setProviders([])
       } finally {
-        if (active) setCategoriesLoading(false)
+        if (active) {
+          setCategoriesLoading(false)
+          setProvidersLoading(false)
+        }
       }
     }
 
-    loadCategories()
+    loadOptions()
 
     return () => {
       active = false
@@ -171,6 +187,7 @@ export function DataTable({
         return (
           row.producto.toLowerCase().includes(normalizedSearch) ||
           row.categoria.toLowerCase().includes(normalizedSearch) ||
+          row.proveedor.toLowerCase().includes(normalizedSearch) ||
           row.codigoBarras.toLowerCase().includes(normalizedSearch)
         )
       }),
@@ -211,6 +228,10 @@ export function DataTable({
 
   async function saveProduct() {
     if (!productForm.producto.trim()) return
+    if (!productForm.proveedorId) {
+      toast.error("Selecciona el proveedor del producto")
+      return
+    }
 
     try {
       const payload = productFormToPayload(productForm, categories)
@@ -220,14 +241,14 @@ export function DataTable({
         setRows((prev) =>
           prev.map((r) =>
             r.id === productEditingId
-              ? productFormToRow(productForm, productEditingId)
+              ? productFormToRow(productForm, productEditingId, providers)
               : r
           )
         )
       } else {
         const created = await createProduct(payload)
         setRows((prev) => [
-          productFormToRow(productForm, Number(created.id)),
+          productFormToRow(productForm, Number(created.id), providers),
           ...prev,
         ])
       }
@@ -306,7 +327,7 @@ export function DataTable({
     if (!filteredRows.length) {
       return (
         <TableRow>
-          <TableCell colSpan={4} className="h-24 text-center text-sm text-muted-foreground">
+          <TableCell colSpan={5} className="h-24 text-center text-sm text-muted-foreground">
             No se encontraron productos.
           </TableCell>
         </TableRow>
@@ -328,6 +349,10 @@ export function DataTable({
                 {row.categoria} | Cod: {row.codigoBarras}
               </span>
             </div>
+          </TableCell>
+
+          <TableCell className="px-5 py-4 text-sm text-muted-foreground">
+            {row.proveedor}
           </TableCell>
 
           <TableCell className="px-5 py-4">
@@ -478,6 +503,7 @@ export function DataTable({
           <TableHeader className="bg-muted/20">
             <TableRow className="border-border/70">
               <TableHead className="px-5 py-4 font-semibold">Producto</TableHead>
+              <TableHead className="px-5 py-4 font-semibold">Proveedor</TableHead>
               <TableHead className="px-5 py-4 font-semibold">Stock</TableHead>
               <TableHead className="px-5 py-4 text-right font-semibold">Precio</TableHead>
               <TableHead className="w-24 px-5 py-4 text-center font-semibold">Acciones</TableHead>
@@ -608,6 +634,37 @@ export function DataTable({
                 </Select>
                 {categoriesError ? (
                   <p className="text-xs text-destructive">{categoriesError}</p>
+                ) : null}
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="producto-proveedor">Proveedor</Label>
+                <Select
+                  value={productForm.proveedorId}
+                  onValueChange={(value) => updateProductForm("proveedorId", value)}
+                  disabled={providersLoading || providers.length === 0}
+                >
+                  <SelectTrigger id="producto-proveedor" className="h-10 rounded-lg">
+                    <SelectValue
+                      placeholder={
+                        providersLoading
+                          ? "Cargando proveedores..."
+                          : providers.length
+                            ? "Selecciona proveedor"
+                            : "Sin proveedores activos"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providers.map((provider) => (
+                      <SelectItem key={provider.id} value={String(provider.id)}>
+                        {provider.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {providersError ? (
+                  <p className="text-xs text-destructive">{providersError}</p>
                 ) : null}
               </div>
 

@@ -41,6 +41,7 @@ CREATE TABLE productos (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   nombre VARCHAR(160) NOT NULL,
   categoria_id BIGINT UNSIGNED NOT NULL,
+  proveedor_id BIGINT UNSIGNED NOT NULL DEFAULT 1,
   codigo_barras VARCHAR(32) NULL UNIQUE,
   precio DECIMAL(10,2) NOT NULL,
   stock INT NOT NULL DEFAULT 0,
@@ -173,6 +174,10 @@ CREATE TABLE proveedores (
   INDEX idx_proveedores_nombre (nombre)
 ) ENGINE=InnoDB;
 
+ALTER TABLE productos
+  ADD CONSTRAINT fk_productos_proveedor
+  FOREIGN KEY (proveedor_id) REFERENCES proveedores(id);
+
 CREATE TABLE compras (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   proveedor_id BIGINT UNSIGNED NOT NULL,
@@ -218,7 +223,10 @@ INSERT INTO usuarios (id, username, email, password, role, nombre_completo, esta
   (5, 'laura', 'laura@pdv.local', 'admin', 'supervisor', 'Laura Gomez', 'activo', NULL),
   (6, 'pedro', 'pedro@pdv.local', 'admin', 'vendedor', 'Pedro Pascal', 'activo', NULL);
 
-INSERT INTO proveedores (id, nombre, contacto, telefono, rfc) VALUES (1, 'Proveedor General', 'Ventas', '555-0000', 'XAXX010101000');
+INSERT INTO proveedores (id, nombre, contacto, telefono, rfc) VALUES
+  (1, 'Proveedor General', 'Ventas', '5550000000', 'XAXX010101000'),
+  (2, 'Coca-Cola', 'Ventas', '5550000001', 'XAXX010101001'),
+  (3, 'Grupo Bimbo', 'Ventas', '5550000002', 'XAXX010101002');
 
 INSERT INTO categorias_producto (id, nombre, slug) VALUES
   (1, 'Bebidas', 'bebidas'),
@@ -229,20 +237,20 @@ INSERT INTO categorias_producto (id, nombre, slug) VALUES
   (6, 'Abarrotes', 'abarrotes'),
   (7, 'Botanas', 'botanas');
 
-INSERT INTO productos (id, nombre, categoria_id, codigo_barras, precio, stock, stock_minimo, unidad) VALUES
-  (1, 'Coca-Cola 600ml', 1, '7501055310248', 3.50, 8, 10, 'pzas'),
-  (2, 'Sabritas Clasicas 45g', 7, '7501030412001', 2.80, 36, 12, 'pzas'),
-  (3, 'Arroz Costeno 1kg', 6, '7750123456789', 5.90, 18, 8, 'bolsas'),
-  (4, 'Leche Gloria 400g', 3, '7750903001234', 4.20, 0, 6, 'latas'),
-  (5, 'Aceite Primor 1L', 6, '7750676004321', 9.50, 5, 7, 'botellas'),
-  (6, 'Galletas Oreo 108g', 2, '7501000108880', 3.20, 21, 9, 'pzas'),
-  (7, 'Inca Kola 500ml', 1, '7501055300129', 3.50, 36, 8, 'pzas'),
-  (8, 'Agua San Luis 625ml', 1, '7501055300136', 2.00, 60, 10, 'pzas'),
-  (9, 'Detergente 500g', 5, '7501055900015', 8.00, 22, 6, 'pzas'),
-  (10, 'Lejia 1L', 5, '7501055900022', 3.50, 30, 8, 'botellas'),
-  (11, 'Pan dulce unidad', 4, NULL, 1.20, 80, 15, 'pzas'),
-  (12, 'Bolsa plastica', 6, NULL, 0.20, 200, 50, 'pzas'),
-  (13, 'Hielo bolsa', 1, NULL, 4.00, 20, 5, 'bolsas');
+INSERT INTO productos (id, nombre, categoria_id, proveedor_id, codigo_barras, precio, stock, stock_minimo, unidad) VALUES
+  (1, 'Coca-Cola 600ml', 1, 2, '7501055310248', 3.50, 8, 10, 'pzas'),
+  (2, 'Sabritas Clasicas 45g', 7, 1, '7501030412001', 2.80, 36, 12, 'pzas'),
+  (3, 'Arroz Costeno 1kg', 6, 1, '7750123456789', 5.90, 18, 8, 'bolsas'),
+  (4, 'Leche Gloria 400g', 3, 1, '7750903001234', 4.20, 0, 6, 'latas'),
+  (5, 'Aceite Primor 1L', 6, 1, '7750676004321', 9.50, 5, 7, 'botellas'),
+  (6, 'Galletas Oreo 108g', 2, 1, '7501000108880', 3.20, 21, 9, 'pzas'),
+  (7, 'Inca Kola 500ml', 1, 2, '7501055300129', 3.50, 36, 8, 'pzas'),
+  (8, 'Agua San Luis 625ml', 1, 2, '7501055300136', 2.00, 60, 10, 'pzas'),
+  (9, 'Detergente 500g', 5, 1, '7501055900015', 8.00, 22, 6, 'pzas'),
+  (10, 'Lejia 1L', 5, 1, '7501055900022', 3.50, 30, 8, 'botellas'),
+  (11, 'Pan dulce unidad', 4, 3, NULL, 1.20, 80, 15, 'pzas'),
+  (12, 'Bolsa plastica', 6, 1, NULL, 0.20, 200, 50, 'pzas'),
+  (13, 'Hielo bolsa', 1, 1, NULL, 4.00, 20, 5, 'bolsas');
 
 INSERT INTO ventas (id, ticket_id, fecha_hora, usuario_id, cliente_nombre, subtotal, iva, total, metodo_pago, estado, efectivo_recibido, cambio, motivo_cancelacion) VALUES
   (1, 'TK-2026-0001', '2026-04-04 09:12:00', 2, 'Maria Lopez', 106.36, 19.14, 125.50, 'Efectivo', 'Pagado', 130.00, 4.50, NULL),
@@ -610,14 +618,14 @@ END$$
 DELIMITER ;
 -- Extra Datos solicitados: mas productos, ventas, mermas, compras, reporte y usuario.
 
-INSERT INTO productos (id, nombre, categoria_id, codigo_barras, precio, stock, stock_minimo, unidad) VALUES
-  (14, 'Doritos Nacho 58g', 7, '7501030412002', 3.00, 25, 10, 'pzas'),
-  (15, 'Sprite 600ml', 1, '7501055310249', 3.50, 15, 10, 'pzas'),
-  (16, 'Yogurt Fresa 250ml', 3, '7501055310250', 4.00, 12, 5, 'pzas'),
-  (17, 'Pan Bimbo Blanco', 4, '7501055310251', 15.00, 8, 4, 'pzas'),
-  (18, 'Jabon Zote 400g', 5, '7501055310252', 12.00, 20, 5, 'pzas'),
-  (19, 'Frijoles Isadora', 6, '7501055310253', 18.00, 10, 5, 'pzas'),
-  (20, 'Cheetos Torciditos 50g', 7, '7501030412003', 2.80, 30, 12, 'pzas');
+INSERT INTO productos (id, nombre, categoria_id, proveedor_id, codigo_barras, precio, stock, stock_minimo, unidad) VALUES
+  (14, 'Doritos Nacho 58g', 7, 1, '7501030412002', 3.00, 25, 10, 'pzas'),
+  (15, 'Sprite 600ml', 1, 2, '7501055310249', 3.50, 15, 10, 'pzas'),
+  (16, 'Yogurt Fresa 250ml', 3, 1, '7501055310250', 4.00, 12, 5, 'pzas'),
+  (17, 'Pan Bimbo Blanco', 4, 3, '7501055310251', 15.00, 8, 4, 'pzas'),
+  (18, 'Jabon Zote 400g', 5, 1, '7501055310252', 12.00, 20, 5, 'pzas'),
+  (19, 'Frijoles Isadora', 6, 1, '7501055310253', 18.00, 10, 5, 'pzas'),
+  (20, 'Cheetos Torciditos 50g', 7, 1, '7501030412003', 2.80, 30, 12, 'pzas');
 
 INSERT INTO ventas (ticket_id, fecha_hora, usuario_id, cliente_nombre, subtotal, iva, total, metodo_pago, estado, efectivo_recibido, cambio, motivo_cancelacion) VALUES
   ('TK-2026-0111', '2026-05-16 09:18:00', 2, 'Cliente H', 45.76, 8.24, 54.00, 'Efectivo', 'Pagado', 60.00, 6.00, NULL),
@@ -650,14 +658,14 @@ INSERT INTO venta_detalles (venta_id, producto_id, producto_nombre, cantidad, pr
 VALUES ((SELECT id FROM ventas WHERE ticket_id = 'TK-2026-0117'), 20, 'Cheetos Torciditos 50g', 2, 2.80, 5.60);
 
 INSERT INTO compras (id, proveedor_id, usuario_id, fecha_hora, total, estado) VALUES
-  (1, 1, 1, '2026-05-10 08:00:00', 100.00, 'Completado'),
+  (1, 2, 1, '2026-05-10 08:00:00', 100.00, 'Completado'),
   (2, 1, 1, '2026-05-11 08:00:00', 150.00, 'Completado'),
   (3, 1, 1, '2026-05-12 08:00:00', 200.00, 'Completado'),
   (4, 1, 1, '2026-05-13 08:00:00', 250.00, 'Completado'),
   (5, 1, 1, '2026-05-14 08:00:00', 300.00, 'Completado'),
   (6, 1, 1, '2026-05-15 08:00:00', 350.00, 'Completado'),
-  (7, 1, 1, '2026-05-16 08:00:00', 400.00, 'Completado'),
-  (8, 1, 1, '2026-05-17 08:00:00', 450.00, 'Completado'),
+  (7, 2, 1, '2026-05-16 08:00:00', 400.00, 'Completado'),
+  (8, 2, 1, '2026-05-17 08:00:00', 450.00, 'Completado'),
   (9, 1, 1, '2026-05-18 08:00:00', 500.00, 'Completado'),
   (10, 1, 1, '2026-05-19 08:00:00', 550.00, 'Completado');
 
@@ -794,6 +802,11 @@ INSERT INTO proveedores (id, nombre, contacto, telefono, rfc, activo) VALUES
 (1049, 'Proveedor Masivo 49 S.A.', 'Contacto 49', '555-000-0049', 'PROV000049XYZ', 1),
 (1050, 'Proveedor Masivo 50 S.A.', 'Contacto 50', '555-000-0050', 'PROV000050XYZ', 1);
 
+-- Los telefonos quedan con el mismo formato de 10 digitos que valida la aplicacion.
+UPDATE proveedores
+SET telefono = REPLACE(telefono, '-', '')
+WHERE id BETWEEN 1001 AND 1050;
+
 INSERT INTO categorias_producto (id, nombre, slug) VALUES
 (1001, 'Categoria Extra 1', 'cat-extra-1'),
 (1002, 'Categoria Extra 2', 'cat-extra-2'),
@@ -897,6 +910,11 @@ INSERT INTO productos (id, nombre, categoria_id, codigo_barras, precio, stock, s
 (1048, 'Producto Masivo 48', 1013, '750849227334', 44.13, 82, 15, 'pzas'),
 (1049, 'Producto Masivo 49', 1047, '750132804687', 22.68, 161, 13, 'pzas'),
 (1050, 'Producto Masivo 50', 1043, '750763445973', 81.23, 88, 19, 'pzas');
+
+-- Los productos masivos pertenecen al primer proveedor masivo.
+UPDATE productos
+SET proveedor_id = 1001
+WHERE id BETWEEN 1001 AND 1050;
 
 INSERT INTO caja_turnos (id, turno_codigo, usuario_id, hora_apertura, monto_inicial, hora_cierre, estado) VALUES
 (1001, 'turno-1-1778249663611', 1050, '2026-05-08 14:14:23', 1957, '2026-05-09 02:14:23', 'cerrado'),
@@ -1243,6 +1261,11 @@ INSERT INTO compras (id, proveedor_id, usuario_id, fecha_hora, total, estado) VA
 (1048, 1017, 1047, '2026-03-13 07:06:56', 1145, 'Completado'),
 (1049, 1031, 1025, '2026-03-14 18:18:24', 3411, 'Completado'),
 (1050, 1031, 1044, '2026-05-16 17:34:17', 663, 'Completado');
+
+-- Mantiene el historial masivo consistente con el proveedor de sus productos.
+UPDATE compras
+SET proveedor_id = 1001
+WHERE id BETWEEN 1001 AND 1050;
 
 INSERT INTO compra_detalles (id, compra_id, producto_id, producto_nombre, cantidad, costo_unitario, subtotal) VALUES
 (1001, 1001, 1047, 'Producto Masivo', 19, 19, 361),

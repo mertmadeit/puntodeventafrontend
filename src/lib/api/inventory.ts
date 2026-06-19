@@ -5,6 +5,7 @@ export type ProductPayload = {
   nombre: string
   codigo_barras: string
   categoria_id: number | string | null
+  proveedor_id: number
   stock: number
   stock_minimo: number
   precio: number

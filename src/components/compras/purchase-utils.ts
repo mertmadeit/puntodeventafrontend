@@ -9,6 +9,7 @@ export type Product = CatalogProduct
 export type Provider = {
   id: number
   nombre: string
+  activo?: boolean
 }
 
 export type CartItem = {

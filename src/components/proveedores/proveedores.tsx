@@ -52,6 +52,11 @@ import { apiFetch } from "@/lib/api/client"
 import {
   EMPTY_FORM,
   buildProviderPayload,
+  getProviderValidationError,
+  RFC_MAX_LENGTH,
+  sanitizeRfc,
+  sanitizeTelefono,
+  TELEFONO_MAX_LENGTH,
   type ProveedorFormValues,
   type ProveedorRow,
 } from "@/components/proveedores/provider-utils"
@@ -112,14 +117,20 @@ export function Proveedores() {
     setForm({
       nombre: row.nombre,
       contacto: row.contacto,
-      telefono: row.telefono,
-      rfc: row.rfc,
+      telefono: sanitizeTelefono(row.telefono),
+      rfc: sanitizeRfc(row.rfc),
     })
     setOpen(true)
   }
 
   async function saveRow() {
     if (!form.nombre.trim()) return
+
+    const validationError = getProviderValidationError(form)
+    if (validationError) {
+      setErrorMessage(validationError)
+      return
+    }
 
     try {
       setErrorMessage(null)
@@ -211,7 +222,7 @@ export function Proveedores() {
                 <TableHead className="px-5 py-4 font-semibold">Nombre de la Empresa</TableHead>
                 <TableHead className="px-5 py-4 font-semibold">Contacto (Vendedor)</TableHead>
                 <TableHead className="px-5 py-4 font-semibold">Teléfono</TableHead>
-                <TableHead className="px-5 py-4 font-semibold">RFC / NIT</TableHead>
+                <TableHead className="px-5 py-4 font-semibold">RFC</TableHead>
                 <TableHead className="w-24 px-5 py-4 text-center font-semibold">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -276,11 +287,30 @@ export function Proveedores() {
             </div>
             <div className="grid gap-2">
               <Label>Teléfono</Label>
-              <Input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+              <Input
+                value={form.telefono}
+                onChange={e => setForm(f => ({ ...f, telefono: sanitizeTelefono(e.target.value) }))}
+                inputMode="numeric"
+                autoComplete="tel-national"
+                maxLength={TELEFONO_MAX_LENGTH}
+                pattern="[0-9]{10}"
+                placeholder="10 dígitos"
+                title="Ingresa exactamente 10 dígitos"
+              />
+              <p className="text-xs text-muted-foreground">Solo números, máximo 10 dígitos.</p>
             </div>
             <div className="grid gap-2">
-              <Label>RFC / NIT</Label>
-              <Input value={form.rfc} onChange={e => setForm(f => ({ ...f, rfc: e.target.value }))} />
+              <Label>RFC</Label>
+              <Input
+                value={form.rfc}
+                onChange={e => setForm(f => ({ ...f, rfc: sanitizeRfc(e.target.value) }))}
+                autoCapitalize="characters"
+                maxLength={RFC_MAX_LENGTH}
+                pattern="[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}"
+                placeholder="12 o 13 caracteres"
+                title="Ingresa un RFC válido de 12 o 13 caracteres"
+              />
+              <p className="text-xs text-muted-foreground">Letras en mayúscula y números, máximo 13 caracteres.</p>
             </div>
             <SheetFooter className="mt-auto pt-4 border-t">
               <Button type="button" variant="outline" onClick={closeSheet}>Cancelar</Button>

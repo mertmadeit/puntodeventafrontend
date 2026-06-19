@@ -13,6 +13,8 @@ export type CatalogProduct = {
   stock: number
   barcode: string
   bg: string
+  providerId: number
+  providerName: string
 }
 
 export type VisualCatalogProduct = CatalogProduct & {
@@ -57,6 +59,8 @@ export function mapApiProductToCatalogProduct(item: ApiProduct): CatalogProduct 
     stock: Number(item.stock),
     barcode: item.barcode ?? "",
     bg: getCategoryAccent(category).bg,
+    providerId: Number(item.providerId ?? 0),
+    providerName: item.providerName ?? "",
   }
 }
 

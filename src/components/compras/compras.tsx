@@ -61,7 +61,7 @@ export function Compras() {
         ])
         
         if (active) {
-          setProveedores(provData)
+          setProveedores(provData.filter((provider) => provider.activo !== false))
           setProductos(prodData.map(mapProductForPurchase))
         }
       } catch (error) {
@@ -75,11 +75,21 @@ export function Compras() {
   }, [])
 
   const filteredProducts = React.useMemo(() => {
-    return filterCatalogProducts(productos, deferredSearch)
-  }, [deferredSearch, productos])
+    if (!selectedProveedorId) return []
+    const providerProducts = productos.filter(
+      (product) => product.providerId === Number(selectedProveedorId)
+    )
+    return filterCatalogProducts(providerProducts, deferredSearch)
+  }, [deferredSearch, productos, selectedProveedorId])
 
   const total = React.useMemo(() => calculatePurchaseTotal(cart), [cart])
   const cartCount = calculateCartCount(cart)
+
+  function changeProveedor(proveedorId: string) {
+    setSelectedProveedorId(proveedorId)
+    setCart([])
+    setSearch("")
+  }
 
   function addToCart(p: Product) {
     setCart((prev) => {
@@ -159,7 +169,7 @@ export function Compras() {
           <div className="flex-1">
             <label className="text-sm font-semibold mb-2 block">Proveedor origen</label>
             <div className="flex items-center gap-2">
-              <Select value={selectedProveedorId} onValueChange={setSelectedProveedorId}>
+              <Select value={selectedProveedorId} onValueChange={changeProveedor}>
                 <SelectTrigger className="h-11 bg-card border-border/60">
                   <div className="flex items-center gap-2">
                     <HugeiconsIcon icon={Store02Icon} className="text-muted-foreground size-4" />
@@ -183,9 +193,10 @@ export function Compras() {
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-5"
               />
               <Input
-                placeholder="Nombre o código de barras..."
+                placeholder={selectedProveedorId ? "Nombre o código de barras..." : "Selecciona primero un proveedor"}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                disabled={!selectedProveedorId}
                 className="pl-10 h-11 bg-card border-border/60 text-base"
               />
             </div>
@@ -242,9 +253,13 @@ export function Compras() {
               <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
                 <p className="text-sm text-muted-foreground">Cargando catálogo...</p>
               </div>
+            ) : !selectedProveedorId ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <p className="text-sm text-muted-foreground">Selecciona un proveedor para ver sus productos.</p>
+              </div>
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-                <p className="text-sm text-muted-foreground">No hay resultados</p>
+                <p className="text-sm text-muted-foreground">Este proveedor no tiene productos asignados.</p>
               </div>
             )}
           </div>

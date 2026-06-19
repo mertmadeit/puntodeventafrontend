@@ -13,6 +13,14 @@ export type InventoryRow = {
   stockMinimo: number
   precio: number
   unidad: string
+  proveedorId: number
+  proveedor: string
+}
+
+export type InventoryProvider = {
+  id: number
+  nombre: string
+  activo?: boolean
 }
 
 export type ProductFormValues = {
@@ -23,6 +31,7 @@ export type ProductFormValues = {
   stockMinimo: string
   precio: string
   unidad: string
+  proveedorId: string
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormValues = {
@@ -33,6 +42,7 @@ export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   stockMinimo: "0",
   precio: "0.00",
   unidad: "pzas",
+  proveedorId: "",
 }
 
 export const currencyFormatter = new Intl.NumberFormat("es-MX", {
@@ -52,6 +62,8 @@ export function mapInventoryItemToRow(item: ApiInventoryItem): InventoryRow {
     stockMinimo: Number(item.minStock),
     precio: Number(item.price),
     unidad: item.unit,
+    proveedorId: Number(item.providerId ?? 0),
+    proveedor: item.providerName ?? "Sin proveedor",
   }
 }
 
@@ -98,6 +110,7 @@ export function productFormToPayload(values: ProductFormValues, categories: ApiC
     nombre: values.producto,
     codigo_barras: values.codigoBarras || "",
     categoria_id: findCategoryId(categories, values.categoria),
+    proveedor_id: Number(values.proveedorId),
     stock: Number(values.stock),
     stock_minimo: Number(values.stockMinimo),
     precio: Number(values.precio),
@@ -106,7 +119,8 @@ export function productFormToPayload(values: ProductFormValues, categories: ApiC
 }
 
 /** Convierte el formulario a una fila local optimista despues de crear o editar. */
-export function productFormToRow(values: ProductFormValues, id: number): InventoryRow {
+export function productFormToRow(values: ProductFormValues, id: number, providers: InventoryProvider[]): InventoryRow {
+  const provider = providers.find((item) => String(item.id) === values.proveedorId)
   return {
     id,
     producto: values.producto,
@@ -116,6 +130,8 @@ export function productFormToRow(values: ProductFormValues, id: number): Invento
     stockMinimo: Number(values.stockMinimo),
     precio: Number(values.precio),
     unidad: values.unidad,
+    proveedorId: Number(values.proveedorId),
+    proveedor: provider?.nombre ?? "Sin proveedor",
   }
 }
 
@@ -129,6 +145,7 @@ export function inventoryRowToForm(row: InventoryRow): ProductFormValues {
     stockMinimo: String(row.stockMinimo),
     precio: row.precio.toFixed(2),
     unidad: row.unidad,
+    proveedorId: row.proveedorId ? String(row.proveedorId) : "",
   }
 }
 
@@ -138,6 +155,7 @@ export function inventoryRowToPayload(row: InventoryRow, categories: ApiCategory
     nombre: row.producto,
     codigo_barras: row.codigoBarras || "",
     categoria_id: findCategoryId(categories, row.categoria),
+    proveedor_id: row.proveedorId,
     stock: row.stock,
     stock_minimo: row.stockMinimo,
     precio: price,
